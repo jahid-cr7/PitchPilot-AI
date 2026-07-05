@@ -341,6 +341,7 @@ def render_sidebar() -> None:
             - 📝 **Feedback** — AI coach and final score  
             - 📊 **Dashboard** — progress analytics  
             - 🗂️ **History** — saved reports and exports  
+            - ⚙️ **Settings** — AI provider and configuration  
             """
         )
 

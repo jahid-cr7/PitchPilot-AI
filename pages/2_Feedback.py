@@ -230,6 +230,9 @@ with section_card("🤖 AI Coach Mode", "Analyze your answer content for structu
                         question=interview_question,
                         role=target_role,
                         speech_result=sp_res,
+                        api_key=st.session_state.get("temp_ai_api_key"),
+                        base_url=st.session_state.get("temp_ai_base_url"),
+                        model=st.session_state.get("temp_ai_model"),
                     )
                 st.session_state["ai_result"] = ai_result
             except Exception as exc:

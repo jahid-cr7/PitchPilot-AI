@@ -245,6 +245,27 @@ PitchPilot AI/
 
 ---
 
+## Quality Check
+
+Before pushing to GitHub, recording a demo, or presenting in an interview, run the automated smoke test:
+
+```bash
+python scripts/smoke_test.py
+```
+
+This script verifies:
+- Required files and folders exist
+- All core modules import successfully
+- SQLite database initializes correctly
+- AI Coach fallback mode works without an API key
+- AI connection test returns gracefully
+- Scoring engine computes a valid overall score
+- Report generator produces non-empty HTML and CSV output
+
+For a full manual checklist, see [docs/QA_CHECKLIST.md](docs/QA_CHECKLIST.md).
+
+---
+
 ## Ethical Use Note
 
 PitchPilot AI is designed as a **practice and self-improvement tool only**.

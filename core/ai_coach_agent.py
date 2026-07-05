@@ -408,6 +408,8 @@ def analyze_answer_with_ai(
     question: str = "Tell me about yourself.",
     role: str = "Software Developer",
     api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+    model: Optional[str] = None,
     speech_result: Optional[dict] = None,
 ) -> Dict[str, Union[str, int, list]]:
     """
@@ -423,6 +425,10 @@ def analyze_answer_with_ai(
         The target job role. Defaults to "Software Developer".
     api_key : str or None, optional
         API key for the AI service. If None, reads from PITCHPILOT_AI_API_KEY env var.
+    base_url : str or None, optional
+        Base URL for the AI provider. If None, reads from PITCHPILOT_AI_BASE_URL env var.
+    model : str or None, optional
+        Model name for the AI provider. If None, reads from PITCHPILOT_AI_MODEL env var.
     speech_result : dict or None, optional
         Result from speech analysis to include metrics in the AI prompt.
 
@@ -443,10 +449,10 @@ def analyze_answer_with_ai(
     if not transcript or not transcript.strip():
         return _error_dict("Transcript is empty. Run speech analysis first.")
 
-    # Resolve config from env vars or parameters
+    # Resolve config: param > env var > default
     resolved_key = api_key or os.environ.get(ENV_API_KEY)
-    resolved_base_url = os.environ.get(ENV_BASE_URL)
-    resolved_model = os.environ.get(ENV_MODEL, "gpt-4o-mini")
+    resolved_base_url = base_url or os.environ.get(ENV_BASE_URL)
+    resolved_model = model or os.environ.get(ENV_MODEL, "gpt-4o-mini")
 
     # Extract speech metrics for richer prompt
     speech_score = 0
@@ -477,3 +483,97 @@ def analyze_answer_with_ai(
 
     # Fall back to rule-based analysis
     return _fallback_analysis(transcript, question, role)
+
+
+# ---------------------------------------------------------------------------
+# Health check
+# ---------------------------------------------------------------------------
+def test_ai_connection(
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+    model: Optional[str] = None,
+) -> Dict[str, str]:
+    """
+    Test the AI provider connection with a minimal request.
+
+    Parameters
+    ----------
+    api_key : str or None
+        API key. Falls back to env var.
+    base_url : str or None
+        Base URL. Falls back to env var.
+    model : str or None
+        Model name. Falls back to env var.
+
+    Returns
+    -------
+    dict
+        {
+            "status": "success" | "error" | "fallback",
+            "message": str,
+            "model_used": str,
+            "mode": "real_ai" | "fallback_rules"
+        }
+    """
+    # Resolve config
+    resolved_key = api_key or os.environ.get(ENV_API_KEY)
+    resolved_base_url = base_url or os.environ.get(ENV_BASE_URL)
+    resolved_model = model or os.environ.get(ENV_MODEL, "gpt-4o-mini")
+
+    if not resolved_key:
+        return {
+            "status": "fallback",
+            "message": "No API key configured. Fallback mode is active.",
+            "model_used": resolved_model,
+            "mode": "fallback_rules",
+        }
+
+    if not OPENAI_AVAILABLE:
+        return {
+            "status": "error",
+            "message": "OpenAI client library is not installed. Install it with: pip install openai",
+            "model_used": resolved_model,
+            "mode": "fallback_rules",
+        }
+
+    try:
+        client_kwargs: Dict[str, Any] = {"api_key": resolved_key, "timeout": REQUEST_TIMEOUT}
+        if resolved_base_url:
+            client_kwargs["base_url"] = resolved_base_url
+
+        client = OpenAI(**client_kwargs)
+
+        # Minimal test request
+        response = client.chat.completions.create(
+            model=resolved_model,
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "Say hello in one word."},
+            ],
+            temperature=0.0,
+            max_tokens=10,
+        )
+
+        content = response.choices[0].message.content
+        if content and content.strip():
+            return {
+                "status": "success",
+                "message": f"Connection successful. Provider responded: \"{content.strip()}\"",
+                "model_used": resolved_model,
+                "mode": "real_ai",
+            }
+        else:
+            return {
+                "status": "error",
+                "message": "Connection succeeded but received empty response.",
+                "model_used": resolved_model,
+                "mode": "real_ai",
+            }
+
+    except Exception as exc:
+        return {
+            "status": "error",
+            "message": f"Connection failed: {exc}",
+            "model_used": resolved_model,
+            "mode": "fallback_rules",
+        }
