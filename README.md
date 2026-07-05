@@ -21,16 +21,18 @@ PitchPilot AI is an end-to-end coaching platform that analyzes practice intervie
 
 ## Demo
 
-<!-- Replace with your own GIF or video link -->
+<!-- TODO: Replace with your screen recording GIF or video link -->
 ```
-[DEMO GIF / VIDEO PLACEHOLDER]
+[DEMO VIDEO PLACEHOLDER]
 - Upload a video on the Practice page
 - Run Video, Camera, and Speech analyses
 - Review AI Coach feedback
 - Generate final score and save the session
 ```
 
-> Screenshots will be added after release.
+> **Demo video:** [Coming soon — add your Loom/YouTube link here]
+>
+> **GitHub Repository:** https://github.com/jahid-cr7/PitchPilot-AI
 
 ---
 
@@ -210,10 +212,14 @@ PitchPilot AI/
 │   ├── __init__.py
 │   └── report_generator.py     # HTML & CSV report generators
 ├── docs/
-│   ├── ARCHITECTURE.md         # System design & data flow
-│   ├── DEMO_SCRIPT.md          # 3-minute demo script
-│   ├── INTERVIEW_GUIDE.md      # Talking points & Q&A
-│   └── ROADMAP.md              # Future improvements
+│   ├── ARCHITECTURE.md            # System design & data flow
+│   ├── DEMO_SCRIPT.md             # 3-minute demo script
+│   ├── INTERVIEW_GUIDE.md         # Talking points & Q&A
+│   ├── ROADMAP.md                 # Future improvements
+│   ├── CV_PROJECT_DESCRIPTION.md  # Copy-paste CV descriptions
+│   ├── LINKEDIN_POST.md           # Ready-to-post LinkedIn content
+│   ├── SCREENSHOT_GUIDE.md        # Screenshot checklist for portfolio
+│   └── VIDEO_DEMO_SCRIPT.md       # 60s and 3-minute video scripts
 ├── uploads/                    # Uploaded MP4 files (ignored by git)
 ├── data/                       # SQLite database (ignored by git)
 ├── requirements.txt
