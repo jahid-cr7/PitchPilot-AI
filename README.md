@@ -30,6 +30,8 @@ PitchPilot AI is an end-to-end coaching platform that analyzes practice intervie
 - Generate final score and save the session
 ```
 
+> Screenshots will be added after release.
+
 ---
 
 ## Key Features
@@ -49,13 +51,8 @@ PitchPilot AI is an end-to-end coaching platform that analyzes practice intervie
 
 ## Screenshots
 
-<!-- Add your own screenshots in docs/screenshots/ -->
-```
-[SCREENSHOT PLACEHOLDER: Practice page with video upload]
-[SCREENSHOT PLACEHOLDER: Feedback page with AI Coach results]
-[SCREENSHOT PLACEHOLDER: Dashboard with trend charts]
-[SCREENSHOT PLACEHOLDER: History page with export buttons]
-```
+<!-- Screenshots will be added after release -->
+> **Screenshots will be added after release.**
 
 ---
 
@@ -121,8 +118,8 @@ For a detailed breakdown, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/yourusername/pitchpilot-ai.git
-cd pitchpilot-ai
+git clone https://github.com/jahid-cr7/PitchPilot-AI.git
+cd PitchPilot-AI
 
 # 2. Create a virtual environment
 python3 -m venv .venv
@@ -141,8 +138,8 @@ streamlit run app.py
 
 ```powershell
 # 1. Clone the repository
-git clone https://github.com/yourusername/pitchpilot-ai.git
-cd pitchpilot-ai
+git clone https://github.com/jahid-cr7/PitchPilot-AI.git
+cd PitchPilot-AI
 
 # 2. Create a virtual environment
 python -m venv .venv
@@ -279,4 +276,3 @@ MIT License — feel free to use, modify, and distribute.
 <p align="center">
   Built with ❤️ for job seekers and public speakers everywhere.
 </p>
-# PitchPilot-AI

@@ -38,3 +38,13 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Media files
+*.mp4
+*.mov
+*.avi
+*.mp3
+*.wav
+*.mkv
+*.flv
+*.wmv
