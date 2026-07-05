@@ -36,6 +36,22 @@ PitchPilot AI is an end-to-end coaching platform that analyzes practice intervie
 
 ---
 
+## Startup-Style UI
+
+PitchPilot AI features a polished, SaaS-style interface designed for portfolio demos and company interviews:
+
+- **Gradient hero section** with clear CTAs
+- **Step indicators** for the guided practice workflow
+- **Styled metric cards** with soft shadows and hover effects
+- **Status badges** (MVP, Offline Fallback, API-Ready, Ethical Practice Tool)
+- **Professional empty states** with action suggestions
+- **Section cards** with borders and consistent spacing
+- **Responsive layout** that works on desktop and mobile
+
+The UI uses custom CSS injected safely via Streamlit and follows modern SaaS design patterns.
+
+---
+
 ## Key Features
 
 | Feature | Description |

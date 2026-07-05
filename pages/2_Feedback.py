@@ -1,11 +1,8 @@
 """
 PitchPilot AI - Feedback Page
 =============================
-Aggregates analysis results from session state (video, camera, speech, AI)
-and displays them as structured feedback.
-
-Includes a final scoring engine that combines all results into an
-overall interview performance score.
+Professional coaching report that aggregates analysis results
+and displays structured feedback with a final performance score.
 """
 
 import streamlit as st
@@ -13,7 +10,16 @@ import streamlit as st
 from core.scoring_engine import calculate_overall_score
 from core.ai_coach_agent import analyze_answer_with_ai
 from core.database import save_practice_session
-from core.ui_utils import render_sidebar
+from core.ui_utils import (
+    render_sidebar,
+    inject_custom_css,
+    render_page_header,
+    render_footer,
+    metric_card,
+    section_card,
+    status_badge,
+    render_empty_state,
+)
 
 # ---------------------------------------------------------------------------
 # Page configuration
@@ -21,16 +27,10 @@ from core.ui_utils import render_sidebar
 st.set_page_config(page_title="Feedback | PitchPilot AI", page_icon="📝")
 
 # ---------------------------------------------------------------------------
-# Shared sidebar
+# Shared UI
 # ---------------------------------------------------------------------------
+inject_custom_css()
 render_sidebar()
-
-# ---------------------------------------------------------------------------
-# UI Header
-# ---------------------------------------------------------------------------
-st.title("📝 Feedback")
-st.markdown("Review feedback for your practice sessions.")
-st.divider()
 
 # ---------------------------------------------------------------------------
 # Gather results from session state
@@ -46,25 +46,64 @@ has_any_result = any(
     for r in (vid_res, cam_res, sp_res)
 )
 
+# ---------------------------------------------------------------------------
+# Page Header
+# ---------------------------------------------------------------------------
+render_page_header(
+    "Coaching Report",
+    "Review your session intelligence, communication scores, and coaching insights.",
+    "📝",
+)
+
 if not has_any_result:
-    st.info(
-        "No analysis results found. "
-        "Go to the **Practice** page, upload a video, and run the analyses first. "
-        "Or load demo data from the **Home** page."
+    render_empty_state(
+        icon="📭",
+        title="No Session Data",
+        text="Upload a video on the Practice page and run the analyses, or load Demo Data from the Home page to see a sample coaching report.",
+        action_label="🚀 Load Demo Data",
+        action_page="app.py",
     )
+    render_footer()
     st.stop()
+
+# ---------------------------------------------------------------------------
+# Session Summary Bar
+# ---------------------------------------------------------------------------
+st.markdown("#### Session Intelligence")
+summary_cols = st.columns(4)
+with summary_cols[0]:
+    status = "Ready" if vid_res is not None and vid_res.get("status") == "success" else "Missing"
+    badge_color = "success" if status == "Ready" else "danger"
+    st.markdown(f"Video: {status_badge(status, badge_color)}", unsafe_allow_html=True)
+with summary_cols[1]:
+    status = "Ready" if cam_res is not None and cam_res.get("status") == "success" else "Missing"
+    badge_color = "success" if status == "Ready" else "danger"
+    st.markdown(f"Camera: {status_badge(status, badge_color)}", unsafe_allow_html=True)
+with summary_cols[2]:
+    status = "Ready" if sp_res is not None and sp_res.get("status") == "success" else "Missing"
+    badge_color = "success" if status == "Ready" else "danger"
+    st.markdown(f"Speech: {status_badge(status, badge_color)}", unsafe_allow_html=True)
+with summary_cols[3]:
+    status = "Ready" if ai_res is not None and ai_res.get("status") in ("success", "fallback") else "Missing"
+    badge_color = "success" if status == "Ready" else "danger"
+    st.markdown(f"AI Coach: {status_badge(status, badge_color)}", unsafe_allow_html=True)
+
+st.divider()
 
 # ---------------------------------------------------------------------------
 # Video Analysis Feedback
 # ---------------------------------------------------------------------------
 if vid_res is not None and vid_res.get("status") == "success":
-    with st.container(border=True):
-        st.subheader("🎥 Video Analysis")
+    with section_card("🎬 Video Intelligence", "Motion analysis and video metadata from OpenCV."):
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Duration", f"{vid_res.get('duration_seconds', 0)} s")
-        col2.metric("FPS", vid_res.get("fps", 0))
-        col3.metric("Resolution", vid_res.get("resolution", "N/A"))
-        col4.metric("Movement Score", vid_res.get("movement_score", 0))
+        with col1:
+            metric_card("Duration", f"{vid_res.get('duration_seconds', 0)} s", "seconds")
+        with col2:
+            metric_card("FPS", f"{vid_res.get('fps', 0)}", "frames per second")
+        with col3:
+            metric_card("Resolution", vid_res.get("resolution", "N/A"))
+        with col4:
+            metric_card("Movement", f"{vid_res.get('movement_score', 0)}", "lower is calmer")
 
         with st.expander("📐 Video Details"):
             st.markdown(
@@ -82,14 +121,18 @@ if vid_res is not None and vid_res.get("status") == "success":
 # Camera Presence Feedback
 # ---------------------------------------------------------------------------
 if cam_res is not None and cam_res.get("status") == "success":
-    with st.container(border=True):
-        st.subheader("📷 Camera Presence")
+    with section_card("📷 Camera Presence", "Face detection, framing, distance, and positioning analysis."):
         c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("Face Visible %", f"{cam_res.get('face_visible_percent', 0)}%")
-        c2.metric("Framing", str(cam_res.get("framing", "unknown")).replace("_", " ").title())
-        c3.metric("Distance", str(cam_res.get("distance_feedback", "unknown")).replace("_", " ").title())
-        c4.metric("Movement", str(cam_res.get("movement_level", "unknown")).title())
-        c5.metric("Camera Score", cam_res.get("camera_score", 0))
+        with c1:
+            metric_card("Face Visible", f"{cam_res.get('face_visible_percent', 0)}%")
+        with c2:
+            metric_card("Framing", str(cam_res.get("framing", "unknown")).replace("_", " ").title())
+        with c3:
+            metric_card("Distance", str(cam_res.get("distance_feedback", "unknown")).replace("_", " ").title())
+        with c4:
+            metric_card("Movement", str(cam_res.get("movement_level", "unknown")).title())
+        with c5:
+            metric_card("Camera Score", f"{cam_res.get('camera_score', 0)}", "/100")
 
         for warning in cam_res.get("warnings", []):
             st.warning(f"⚠️ {warning}")
@@ -110,14 +153,18 @@ if cam_res is not None and cam_res.get("status") == "success":
 # Speech Analysis Feedback
 # ---------------------------------------------------------------------------
 if sp_res is not None and sp_res.get("status") == "success":
-    with st.container(border=True):
-        st.subheader("🎤 Speech Analysis")
+    with section_card("🎤 Speech Analytics", "Transcription, pacing, filler words, and delivery quality."):
         s1, s2, s3, s4, s5 = st.columns(5)
-        s1.metric("Word Count", sp_res.get("word_count", 0))
-        s2.metric("WPM", sp_res.get("words_per_minute", 0))
-        s3.metric("Filler Words", sp_res.get("filler_word_count", 0))
-        s4.metric("Repeated Words", sp_res.get("repeated_word_count", 0))
-        s5.metric("Speech Score", sp_res.get("speech_score", 0))
+        with s1:
+            metric_card("Words", sp_res.get("word_count", 0))
+        with s2:
+            metric_card("WPM", sp_res.get("words_per_minute", 0), "words per minute")
+        with s3:
+            metric_card("Fillers", sp_res.get("filler_word_count", 0))
+        with s4:
+            metric_card("Repeated", sp_res.get("repeated_word_count", 0))
+        with s5:
+            metric_card("Speech Score", f"{sp_res.get('speech_score', 0)}", "/100")
 
         for warning in sp_res.get("warnings", []):
             st.warning(f"⚠️ {warning}")
@@ -139,10 +186,7 @@ if sp_res is not None and sp_res.get("status") == "success":
 # ---------------------------------------------------------------------------
 # AI Coach Agent Section
 # ---------------------------------------------------------------------------
-with st.container(border=True):
-    st.subheader("🤖 AI Coach")
-    st.markdown("Analyze your answer content for structure, relevance, and clarity.")
-
+with section_card("🤖 AI Coach Mode", "Analyze your answer content for structure, relevance, and clarity."):
     # Pre-fill transcript from speech result if available
     default_transcript = ""
     if sp_res is not None and sp_res.get("status") == "success":
@@ -155,20 +199,23 @@ with st.container(border=True):
             height=200,
             placeholder="Paste your answer here or run Speech Analysis to auto-fill...",
         )
-        interview_question = st.text_input(
-            "Interview Question",
-            value=st.session_state.get("interview_question", "Tell me about yourself."),
-            placeholder="e.g., Tell me about yourself.",
-        )
-        target_role = st.text_input(
-            "Target Role",
-            value=st.session_state.get("target_role", "Software Developer"),
-            placeholder="e.g., Software Developer",
-        )
-        submitted = st.form_submit_button("🚀 Run AI Coach")
+        cq1, cq2 = st.columns(2)
+        with cq1:
+            interview_question = st.text_input(
+                "Interview Question",
+                value=st.session_state.get("interview_question", "Tell me about yourself."),
+                placeholder="e.g., Tell me about yourself.",
+            )
+        with cq2:
+            target_role = st.text_input(
+                "Target Role",
+                value=st.session_state.get("target_role", "Software Developer"),
+                placeholder="e.g., Software Developer",
+            )
+        submitted = st.form_submit_button("🚀 Generate Coaching Insights")
 
     if not user_transcript.strip():
-        st.info("Please run Speech Analysis or paste your answer manually.")
+        st.info("Please run Speech Analysis or paste your answer manually to enable AI Coach.")
 
     if submitted:
         st.session_state["interview_question"] = interview_question
@@ -177,7 +224,7 @@ with st.container(border=True):
             st.warning("Please run Speech Analysis or paste your answer manually.")
         else:
             try:
-                with st.spinner("Analyzing answer content..."):
+                with st.spinner("Generating coaching insights..."):
                     ai_result = analyze_answer_with_ai(
                         transcript=user_transcript,
                         question=interview_question,
@@ -195,18 +242,21 @@ with st.container(border=True):
         if ai_res.get("status") in ("success", "fallback"):
             if ai_res.get("status") == "fallback":
                 st.info(
-                    "AI Coach is running in **fallback mode** (no API key detected). "
-                    "Set `PITCHPILOT_AI_API_KEY` environment variable for AI-powered analysis.  \n\n"
+                    "AI Coach is running in **offline fallback mode** (no API key detected). "
+                    "Set `PITCHPILOT_AI_API_KEY` for AI-powered analysis.  \n\n"
                     "Mode: **fallback_rules** | Model: fallback_rules"
                 )
             else:
                 st.success("AI Coach analysis complete via real AI API.")
 
             a1, a2, a3 = st.columns(3)
-            a1.metric("Answer Score", ai_res.get("answer_score", 0))
-            a2.metric("Model Used", ai_res.get("model_used", "unknown"))
-            mode_label = "real_ai" if ai_res.get("status") == "success" else ai_res.get("status", "unknown")
-            a3.metric("Mode", mode_label)
+            with a1:
+                metric_card("Answer Score", f"{ai_res.get('answer_score', 0)}", "/100")
+            with a2:
+                metric_card("Model", ai_res.get("model_used", "unknown"))
+            with a3:
+                mode_label = "real_ai" if ai_res.get("status") == "success" else ai_res.get("status", "unknown")
+                metric_card("Mode", mode_label)
 
             st.markdown(f"**Structure Feedback:** {ai_res.get('structure_feedback', '')}")
 
@@ -223,7 +273,7 @@ with st.container(border=True):
 
             st.info(f"🎯 **Next Content Task:** {ai_res.get('next_content_task', '')}")
 
-            with st.expander("📋 Summary"):
+            with st.expander("📋 Coaching Summary"):
                 st.write(ai_res.get("summary", ""))
         else:
             st.error(ai_res.get("message", "AI Coach returned an error."))
@@ -231,10 +281,7 @@ with st.container(border=True):
 # ---------------------------------------------------------------------------
 # Final Overall Score
 # ---------------------------------------------------------------------------
-with st.container(border=True):
-    st.subheader("🏆 Final Feedback")
-
-    # Show Generate button only if all three analyses succeeded
+with section_card("🏆 Final Performance Score", "Weighted aggregation of all four coaching dimensions."):
     all_success = (
         vid_res is not None and vid_res.get("status") == "success"
         and cam_res is not None and cam_res.get("status") == "success"
@@ -248,65 +295,78 @@ with st.container(border=True):
         )
     else:
         ai_res = st.session_state.get("ai_result")
-        if st.button("✨ Generate Final Feedback", type="primary", key="btn_final_feedback"):
+        if st.button("✨ Generate Final Performance Score", type="primary", key="btn_final_feedback"):
             try:
                 with st.spinner("Calculating overall performance score..."):
                     result = calculate_overall_score(vid_res, cam_res, sp_res, ai_res)
                 st.session_state["final_feedback"] = result
-                # Reset saved flag so user can save the new result
                 st.session_state["session_saved"] = False
             except Exception as exc:
                 st.error(f"Final feedback generation failed: {exc}")
                 st.session_state["final_feedback"] = None
 
-        # Display stored final feedback
         final_fb = st.session_state.get("final_feedback")
         if final_fb is not None:
             if final_fb.get("status") == "success":
                 st.success(final_fb.get("message", "Feedback generated."))
 
-                # Big overall score — visually highlighted
                 overall = final_fb.get("overall_score", 0)
                 level = final_fb.get("performance_level", "Unknown")
 
-                score_col, level_col = st.columns(2)
-                score_col.metric("Overall Score", f"{overall}/100")
-                level_col.metric("Performance Level", level)
+                # Highlighted score
+                score_col, level_col = st.columns([1, 1])
+                with score_col:
+                    st.markdown(
+                        f"""
+                        <div class="pp-score-highlight">
+                          <div class="pp-score-highlight__value">{overall}</div>
+                          <div class="pp-score-highlight__label">Overall Score / 100</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                with level_col:
+                    st.markdown(
+                        f"""
+                        <div class="pp-score-highlight" style="background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%);border-color:#86efac;">
+                          <div class="pp-score-highlight__value" style="color:#15803d;">{level}</div>
+                          <div class="pp-score-highlight__label" style="color:#16a34a;">Performance Level</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
 
-                # Component score breakdown
                 st.markdown("#### Component Breakdown")
                 b1, b2, b3, b4 = st.columns(4)
-                b1.metric("Video", final_fb.get("video_score", 0))
-                b2.metric("Camera", final_fb.get("camera_score", 0))
-                b3.metric("Speech", final_fb.get("speech_score", 0))
-                b4.metric("Answer", final_fb.get("answer_score", 0))
+                with b1:
+                    metric_card("Video", f"{final_fb.get('video_score', 0)}", "/100")
+                with b2:
+                    metric_card("Camera", f"{final_fb.get('camera_score', 0)}", "/100")
+                with b3:
+                    metric_card("Speech", f"{final_fb.get('speech_score', 0)}", "/100")
+                with b4:
+                    metric_card("Answer", f"{final_fb.get('answer_score', 0)}", "/100")
 
                 st.divider()
 
-                # Strengths
                 st.markdown("#### ✅ Strengths")
                 for item in final_fb.get("strengths", []):
                     st.success(item)
 
-                # Weak points
                 st.markdown("#### 🔧 Weak Points")
                 for item in final_fb.get("weak_points", []):
                     st.warning(item)
 
-                # Next practice task
                 st.markdown("#### 🎯 Next Practice Task")
                 st.info(final_fb.get("next_practice_task", "Keep practicing!"))
 
-                # Summary
-                with st.expander("📋 Full Summary"):
+                with st.expander("📋 Full Coaching Summary"):
                     st.write(final_fb.get("summary", ""))
 
-                # -------------------------------------------------------------------
-                # Save Session to Database
-                # -------------------------------------------------------------------
+                # Save Session
                 st.divider()
                 if not st.session_state.get("session_saved", False):
-                    if st.button("💾 Save Session", type="primary", key="btn_save_session"):
+                    if st.button("💾 Save Session to History", type="primary", key="btn_save_session"):
                         try:
                             with st.spinner("Saving session to database..."):
                                 session_id = save_practice_session(
@@ -328,4 +388,4 @@ with st.container(border=True):
             else:
                 st.error(final_fb.get("message", "Final feedback generation returned an error."))
 
-st.caption("Feedback is generated from your latest practice session analysis.")
+render_footer()
