@@ -178,6 +178,24 @@ The app will open automatically at `http://localhost:8501`.
 
 ---
 
+## Deployment
+
+### Local
+
+```bash
+streamlit run app.py
+```
+
+The app opens at `http://localhost:8501`.
+
+### Cloud / Production
+
+- See [DEPLOYMENT.md](DEPLOYMENT.md) for full deployment instructions.
+- Configure secrets using your deployment platform's secrets manager (e.g., Streamlit Cloud Secrets, Railway Variables, Render Environment).
+- **Never commit real API keys to Git.**
+
+---
+
 ## How to Use Demo Mode
 
 Perfect for interviews, presentations, or testing without a real video:
