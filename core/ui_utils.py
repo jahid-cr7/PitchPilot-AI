@@ -109,14 +109,16 @@ def inject_global_css() -> None:
             margin: 1rem 0;
         }
 
+        .pp-section-card h1,
+        .pp-section-card h2,
         .pp-section-card h3 {
             margin: 0 0 0.35rem 0;
-            color: var(--pp-text);
+            color: #0f172a !important;
         }
 
         .pp-section-card p {
             margin: 0;
-            color: var(--pp-muted);
+            color: #475569 !important;
         }
 
         .pp-metric-card {

@@ -45,6 +45,7 @@ REQUIRED_FILES = [
     "core/scoring_engine.py",
     "core/database.py",
     "core/ui_utils.py",
+    "core/question_bank.py",
     "pages/1_Practice.py",
     "pages/2_Feedback.py",
     "pages/3_Dashboard.py",
@@ -144,6 +145,13 @@ try:
     _ok("import core.ui_utils")
 except Exception as exc:
     _fail("import core.ui_utils", str(exc))
+
+try:
+    from core import question_bank
+
+    _ok("import core.question_bank")
+except Exception as exc:
+    _fail("import core.question_bank", str(exc))
 
 try:
     from reports import report_generator
@@ -302,6 +310,42 @@ try:
     )
 except Exception as exc:
     _fail("Report generator test", str(exc))
+
+# ---------------------------------------------------------------------------
+# 8. Question Bank
+# ---------------------------------------------------------------------------
+print("\n🎯 Question Bank")
+try:
+    modes = question_bank.get_practice_modes()
+    check(
+        "get_practice_modes() returns non-empty list",
+        len(modes) >= 7,
+        f"got {len(modes)} modes",
+    )
+
+    for mode in modes:
+        questions = question_bank.get_questions_for_mode(mode)
+        check(
+            f"mode '{mode}' has at least 8 questions",
+            len(questions) >= 8,
+            f"got {len(questions)}",
+        )
+
+    random_q = question_bank.get_random_question(modes[0])
+    check(
+        "get_random_question() returns a non-empty string",
+        isinstance(random_q, str) and len(random_q) > 0,
+        f"got {random_q!r}",
+    )
+
+    role = question_bank.get_default_role_for_mode(modes[0])
+    check(
+        "get_default_role_for_mode() returns a non-empty string",
+        isinstance(role, str) and len(role) > 0,
+        f"got {role!r}",
+    )
+except Exception as exc:
+    _fail("Question bank test", str(exc))
 
 # ---------------------------------------------------------------------------
 # Summary

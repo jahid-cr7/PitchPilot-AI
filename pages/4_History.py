@@ -163,7 +163,7 @@ with section_card("Export Report"):
             file_name=html_filename,
             mime="text/html",
             key=f"dl_html_{session['id']}",
-            use_container_width=True,
+            width="stretch",
         )
     with col_csv:
         st.download_button(
@@ -172,7 +172,7 @@ with section_card("Export Report"):
             file_name=csv_filename,
             mime="text/csv",
             key=f"dl_csv_{session['id']}",
-            use_container_width=True,
+            width="stretch",
         )
 
 # ---------------------------------------------------------------------------

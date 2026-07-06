@@ -159,7 +159,7 @@ with section_card("Practice History", "All saved sessions with key metrics."):
             "camera_score", "speech_score", "answer_score",
         ]
         display_cols = [c for c in display_cols if c in display_df.columns]
-        st.dataframe(display_df[display_cols], width="stretch", use_container_width=True)
+        st.dataframe(display_df[display_cols], width="stretch")
     else:
         render_empty_state(
             icon="📚",

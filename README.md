@@ -64,6 +64,8 @@ The UI uses custom CSS injected safely via Streamlit and follows modern SaaS des
 | **Dashboard** | Tracks progress over time with trend charts and key metrics |
 | **Session History** | Saves completed sessions to SQLite with HTML/CSV export |
 | **Demo Mode** | Loads sample data instantly for presentations and testing |
+| **Role-Based Question Bank** | Curated interview questions across 7 practice modes (Software Dev, AI/ML, Data Analyst, University, Presentation, Sales, Behavioral) with random question picker |
+| **AI Settings** | Configure AI provider, test connections, and manage temporary API keys |
 
 ---
 
@@ -218,12 +220,14 @@ PitchPilot AI/
 │   ├── ai_coach_agent.py       # LLM integration + rule-based fallback
 │   ├── scoring_engine.py       # Weighted overall score calculation
 │   ├── database.py             # SQLite session storage
-│   └── ui_utils.py             # Shared sidebar & UI components
+│   ├── ui_utils.py             # Shared sidebar & UI components
+│   └── question_bank.py        # Role-based interview question bank
 ├── pages/
-│   ├── 1_Practice.py           # Video upload & analysis runner
+│   ├── 1_Practice.py           # Video upload, practice mode & analysis runner
 │   ├── 2_Feedback.py           # Results, AI Coach, final scoring
 │   ├── 3_Dashboard.py          # Progress charts & KPIs
-│   └── 4_History.py            # Browse, export, delete sessions
+│   ├── 4_History.py            # Browse, export, delete sessions
+│   └── 5_Settings.py           # AI provider configuration & health check
 ├── reports/
 │   ├── __init__.py
 │   └── report_generator.py     # HTML & CSV report generators

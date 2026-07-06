@@ -49,7 +49,7 @@ st.markdown(
     """
     <div class="pp-hero">
       <h1>🎯 PitchPilot AI</h1>
-      <p>Practice smarter. Speak better. Interview with confidence.</p>
+      <p>Practice smarter with role-based modes, a curated interview question bank, and random question practice.</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -57,11 +57,11 @@ st.markdown(
 
 # Badges
 render_badges([
-    status_badge("MVP", "primary"),
-    status_badge("Offline Fallback", "success"),
-    status_badge("API-Ready", "warning"),
-    status_badge("Local SQLite", "neutral"),
-    status_badge("Ethical Practice Tool", "neutral"),
+    ("MVP", "info"),
+    ("Offline Fallback", "success"),
+    ("API-Ready", "warning"),
+    ("Local SQLite", "neutral"),
+    ("Ethical Practice Tool", "neutral"),
 ])
 
 # ---------------------------------------------------------------------------
@@ -69,13 +69,13 @@ render_badges([
 # ---------------------------------------------------------------------------
 c1, c2, c3 = st.columns(3)
 with c1:
-    if st.button("🚀 Start Practice", type="primary", use_container_width=True):
+    if st.button("🚀 Start Practice", type="primary", width="stretch"):
         st.switch_page("pages/1_Practice.py")
 with c2:
-    if st.button("📊 View Dashboard", type="secondary", use_container_width=True):
+    if st.button("📊 View Dashboard", type="secondary", width="stretch"):
         st.switch_page("pages/3_Dashboard.py")
 with c3:
-    if st.button("🧪 Load Demo Data", type="secondary", use_container_width=True):
+    if st.button("🧪 Load Demo Data", type="secondary", width="stretch"):
         demo_transcript = (
             "Hello, thank you for having me today. My name is Alex, and I'm a software "
             "developer with over five years of experience building web applications. "
@@ -292,6 +292,20 @@ with f6:
     with st.container(border=True):
         st.markdown("### 📥 Report Export")
         st.markdown("Professional HTML and CSV reports for sharing and archiving.")
+
+f7, f8, f9 = st.columns(3)
+with f7:
+    with st.container(border=True):
+        st.markdown("### 🎯 Question Bank")
+        st.markdown("Curated interview questions for 7 practice modes: Software, AI/ML, Data, University, Presentation, Sales, and Behavioral.")
+with f8:
+    with st.container(border=True):
+        st.markdown("### 🎲 Random Question")
+        st.markdown("Pick a random question from your selected mode to keep practice sessions fresh.")
+with f9:
+    with st.container(border=True):
+        st.markdown("### ⚙️ AI Settings")
+        st.markdown("Configure AI provider, test connections, and manage temporary API keys.")
 
 st.divider()
 

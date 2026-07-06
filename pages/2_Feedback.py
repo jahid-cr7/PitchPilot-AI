@@ -10,6 +10,10 @@ import streamlit as st
 from core.scoring_engine import calculate_overall_score
 from core.ai_coach_agent import analyze_answer_with_ai
 from core.database import save_practice_session
+from core.question_bank import (
+    get_default_role_for_mode,
+    get_random_question,
+)
 from core.ui_utils import (
     render_sidebar,
     inject_custom_css,
@@ -192,6 +196,15 @@ with section_card("🤖 AI Coach Mode", "Analyze your answer content for structu
     if sp_res is not None and sp_res.get("status") == "success":
         default_transcript = sp_res.get("transcript", "")
 
+    # Resolve defaults from session state or question bank
+    practice_mode = st.session_state.get("practice_mode")
+    if practice_mode:
+        default_question = st.session_state.get("interview_question", get_random_question(practice_mode))
+        default_role = st.session_state.get("target_role", get_default_role_for_mode(practice_mode))
+    else:
+        default_question = st.session_state.get("interview_question", "Tell me about yourself.")
+        default_role = st.session_state.get("target_role", "Software Developer")
+
     with st.form("ai_coach_form"):
         user_transcript = st.text_area(
             "Your Answer / Transcript",
@@ -203,13 +216,13 @@ with section_card("🤖 AI Coach Mode", "Analyze your answer content for structu
         with cq1:
             interview_question = st.text_input(
                 "Interview Question",
-                value=st.session_state.get("interview_question", "Tell me about yourself."),
+                value=default_question,
                 placeholder="e.g., Tell me about yourself.",
             )
         with cq2:
             target_role = st.text_input(
                 "Target Role",
-                value=st.session_state.get("target_role", "Software Developer"),
+                value=default_role,
                 placeholder="e.g., Software Developer",
             )
         submitted = st.form_submit_button("🚀 Generate Coaching Insights")

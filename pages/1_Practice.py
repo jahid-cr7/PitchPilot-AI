@@ -11,6 +11,12 @@ import streamlit as st
 from core.video_analyzer import analyze_video
 from core.camera_analyzer import analyze_camera_presence
 from core.speech_analyzer import analyze_speech
+from core.question_bank import (
+    get_practice_modes,
+    get_questions_for_mode,
+    get_random_question,
+    get_default_role_for_mode,
+)
 from core.ui_utils import (
     render_sidebar,
     inject_custom_css,
@@ -97,6 +103,49 @@ render_workflow_steps(workflow_steps, current_step=current_step)
 # Demo mode indicator
 if vid_res is not None and vid_res.get("status") == "success":
     st.info("ℹ️ Demo data or previous analysis results are loaded. Upload a new video to replace them.")
+
+# ---------------------------------------------------------------------------
+# Practice Mode Selector
+# ---------------------------------------------------------------------------
+with section_card("Practice Setup", "Choose a practice mode and question to focus your session."):
+    modes = get_practice_modes()
+    current_mode = st.session_state.get("practice_mode", modes[0])
+
+    selected_mode = st.selectbox(
+        "Practice Mode",
+        modes,
+        index=modes.index(current_mode) if current_mode in modes else 0,
+    )
+    st.session_state["practice_mode"] = selected_mode
+
+    questions = get_questions_for_mode(selected_mode)
+    current_question = st.session_state.get("interview_question", questions[0] if questions else "Tell me about yourself.")
+
+    c1, c2 = st.columns([3, 1])
+    with c1:
+        selected_question = st.selectbox(
+            "Interview Question",
+            questions,
+            index=questions.index(current_question) if current_question in questions else 0,
+        )
+    with c2:
+        st.markdown("<div style='height:1.7rem;'></div>", unsafe_allow_html=True)
+        if st.button("🎲 Random", width="stretch"):
+            selected_question = get_random_question(selected_mode)
+            st.session_state["interview_question"] = selected_question
+            st.rerun()
+
+    st.session_state["interview_question"] = selected_question
+
+    default_role = get_default_role_for_mode(selected_mode)
+    current_role = st.session_state.get("target_role", default_role)
+    st.session_state["target_role"] = st.text_input(
+        "Target Role",
+        value=current_role,
+        placeholder="e.g., Software Developer",
+    )
+
+    st.info(f"**Current setup:** {selected_mode} — *{selected_question}* — Role: {st.session_state['target_role']}")
 
 # ---------------------------------------------------------------------------
 # Upload Card
