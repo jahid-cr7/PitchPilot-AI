@@ -266,14 +266,25 @@ PitchPilot AI/
 │   ├── DEMO_SCRIPT.md             # 3-minute demo script
 │   ├── INTERVIEW_GUIDE.md         # Talking points & Q&A
 │   ├── ROADMAP.md                 # Future improvements
+│   ├── QA_CHECKLIST.md            # Pre-push QA checklist
+│   ├── FINAL_CHECKLIST.md         # Release readiness checklist
 │   ├── CV_PROJECT_DESCRIPTION.md  # Copy-paste CV descriptions
 │   ├── LINKEDIN_POST.md           # Ready-to-post LinkedIn content
 │   ├── SCREENSHOT_GUIDE.md        # Screenshot checklist for portfolio
 │   └── VIDEO_DEMO_SCRIPT.md       # 60s and 3-minute video scripts
+├── portfolio/                  # Portfolio demo package for interviews
+│   ├── PROJECT_SUMMARY.md
+│   ├── INTERVIEW_PITCH.md
+│   ├── DEMO_FLOW.md
+│   ├── RESUME_BULLETS.md
+│   └── SCREENSHOT_LIST.md
 ├── uploads/                    # Uploaded MP4 files (ignored by git)
 ├── data/                       # SQLite database (ignored by git)
 ├── requirements.txt
 ├── README.md
+├── CHANGELOG.md
+├── RELEASE_NOTES.md
+├── DEPLOYMENT.md
 └── .gitignore
 ```
 
