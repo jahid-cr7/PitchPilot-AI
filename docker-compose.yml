@@ -1,0 +1,16 @@
+services:
+  pitchpilot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pitchpilot-ai
+    ports:
+      - "8501:8501"
+    environment:
+      - PITCHPILOT_AI_API_KEY=${PITCHPILOT_AI_API_KEY:-}
+      - PITCHPILOT_AI_BASE_URL=${PITCHPILOT_AI_BASE_URL:-https://api.openai.com/v1}
+      - PITCHPILOT_AI_MODEL=${PITCHPILOT_AI_MODEL:-gpt-4o-mini}
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    restart: unless-stopped

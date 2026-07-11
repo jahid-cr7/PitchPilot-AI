@@ -194,6 +194,18 @@ The app opens at `http://localhost:8501`.
 - Configure secrets using your deployment platform's secrets manager (e.g., Streamlit Cloud Secrets, Railway Variables, Render Environment).
 - **Never commit real API keys to Git.**
 
+### Docker
+
+Docker and Docker Compose are supported. See [docs/DOCKER.md](docs/DOCKER.md) for build, run, and troubleshooting instructions.
+
+```bash
+docker-compose up --build
+```
+
+### CI
+
+GitHub Actions CI is configured to compile-check the code and run smoke tests on every push and pull request.
+
 ---
 
 ## How to Use Demo Mode
