@@ -21,18 +21,18 @@ PitchPilot AI is an end-to-end coaching platform that analyzes practice intervie
 
 ## Demo
 
-<!-- TODO: Replace with your screen recording GIF or video link -->
-```
-[DEMO VIDEO PLACEHOLDER]
-- Upload a video on the Practice page
-- Run Video, Camera, and Speech analyses
-- Review AI Coach feedback
-- Generate final score and save the session
-```
-
-> **Demo video:** [Coming soon — add your Loom/YouTube link here]
+> **Demo video:** [Coming soon — Loom/YouTube link to be added after recording]
 >
 > **GitHub Repository:** https://github.com/jahid-cr7/PitchPilot-AI
+
+**Quick preview of what the demo covers:**
+- Upload a video on the Practice page (or load Demo Data instantly)
+- Run Video, Camera, and Speech analyses
+- Review AI Coach feedback — works offline with rule-based fallback, upgrades to LLM with an API key
+- Generate a final performance score and save the session
+- Track progress on the Dashboard and export HTML/CSV reports
+
+For a full demo script and recording checklist, see [`portfolio/DEMO_VIDEO_CHECKLIST.md`](portfolio/DEMO_VIDEO_CHECKLIST.md).
 
 ---
 
