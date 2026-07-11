@@ -344,6 +344,22 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for the full roadmap. Highlights:
 
 ---
 
+## Portfolio & Demo
+
+PitchPilot AI includes a complete **portfolio demo package** designed for GitHub showcases, company interviews, and career presentations:
+
+| Document | Purpose |
+|----------|---------|
+| [`portfolio/PROJECT_SUMMARY.md`](portfolio/PROJECT_SUMMARY.md) | One-page project overview with problem, users, features, tech stack, and ethical use note |
+| [`portfolio/INTERVIEW_PITCH.md`](portfolio/INTERVIEW_PITCH.md) | Ready-to-use pitch scripts: 30s, 1m, 2m, technical, and business explanations |
+| [`portfolio/DEMO_FLOW.md`](portfolio/DEMO_FLOW.md) | Step-by-step demo walkthrough with talking points for every screen |
+| [`portfolio/RESUME_BULLETS.md`](portfolio/RESUME_BULLETS.md) | CV bullet points, LinkedIn descriptions, GitHub repo description, and portfolio website copy |
+| [`portfolio/SCREENSHOT_LIST.md`](portfolio/SCREENSHOT_LIST.md) | Required screenshot checklist with capture instructions and naming conventions |
+
+Use these documents to prepare for interviews, update your portfolio, or record a demo video.
+
+---
+
 ## License
 
 MIT License — feel free to use, modify, and distribute.

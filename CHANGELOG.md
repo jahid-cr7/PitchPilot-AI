@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## v1.0.0
+
+### Added
+- Role-based practice modes with curated interview question bank (7 modes: Software Dev, AI/ML, Data Analyst, University, Presentation, Sales, Behavioral)
+- AI Settings page for configuring AI provider, testing connections, and managing temporary API keys
+- Docker and Docker Compose support for containerized local deployment
+- GitHub Actions CI workflow for automated compile checks and smoke tests on every push and PR
+- Deployment configuration and documentation (DEPLOYMENT.md, docs/DOCKER.md)
+- QA/smoke test support (`scripts/smoke_test.py`) verifying file structure, imports, database init, AI fallback, scoring engine, and report generation
+- Portfolio demo package (`portfolio/`) with project summary, interview pitch guide, demo flow, resume bullets, and screenshot checklist
+
 ## [v1.0.0] - Initial MVP Release
 
 ### Added
