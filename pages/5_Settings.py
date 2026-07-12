@@ -123,7 +123,7 @@ with section_card("Temporary Session Settings"):
     st.info(
         "💡 **Provider hints:**\n"
         "- **OpenAI:** leave Base URL empty, use model `gpt-4o-mini`\n"
-        "- **Gemini:** Base URL `https://generativelanguage.googleapis.com/v1beta/openai/`, use model `gemini-1.5-flash`\n"
+        "- **Gemini:** Base URL `https://generativelanguage.googleapis.com/v1beta/openai/`, use model `gemini-3.5-flash`\n"
         "- **Groq:** Base URL `https://api.groq.com/openai/v1`, use model `llama3-8b-8192`"
     )
 
