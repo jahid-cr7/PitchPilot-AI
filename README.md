@@ -71,8 +71,28 @@ The UI uses custom CSS injected safely via Streamlit and follows modern SaaS des
 
 ## Screenshots
 
-<!-- Screenshots will be added after release -->
-> **Screenshots will be added after release.**
+Below are screenshots from the v1.0.0 release showing the full practice, coaching, dashboard, history, settings, and export workflow.
+
+### Home Page
+![Home Page](portfolio/screenshots/01_home_page.png)
+
+### Practice Mode & Question Bank
+![Practice Mode and Question Bank](portfolio/screenshots/02_practice_question_bank.png)
+
+### AI Coaching Feedback
+![AI Coaching Feedback](portfolio/screenshots/03_feedback_ai_coach.png)
+
+### Progress Dashboard
+![Progress Dashboard](portfolio/screenshots/04_dashboard_progress.png)
+
+### Session History & Export
+![Session History and Export](portfolio/screenshots/05_history_report_export.png)
+
+### AI Provider Settings
+![AI Provider Settings](portfolio/screenshots/06_settings_ai_provider.png)
+
+### Exported HTML Report
+![Exported HTML Report](portfolio/screenshots/07_html_report_example.png)
 
 ---
 
