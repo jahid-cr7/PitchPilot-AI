@@ -1,0 +1,1 @@
+"""PitchPilot AI — FastAPI backend."""
