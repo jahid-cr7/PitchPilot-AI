@@ -98,6 +98,56 @@ def _get_role_keywords(role: str) -> List[str]:
     return ["experience", "skills", "project", "team", "work", "goal", "achieve", "learn", "improve"]
 
 
+def _extract_message_text(response) -> str:
+    """
+    Safely extract text from an OpenAI-compatible chat completion response.
+    Handles string content, list-of-parts content, and dict-style responses.
+    Returns "" if content is None or empty; never returns raw provider object text.
+    """
+    try:
+        if not response or not getattr(response, "choices", None):
+            return ""
+
+        choice = response.choices[0]
+        if not choice:
+            return ""
+
+        message = getattr(choice, "message", None)
+        if message is None:
+            if isinstance(choice, dict):
+                message = choice.get("message", {})
+            else:
+                return ""
+
+        # Standard OpenAI path
+        content = getattr(message, "content", None)
+        if content is None and isinstance(message, dict):
+            content = message.get("content")
+
+        if isinstance(content, str):
+            return content
+
+        # Some providers return content as a list of parts
+        if isinstance(content, list):
+            parts: List[str] = []
+            for part in content:
+                if isinstance(part, str):
+                    parts.append(part)
+                elif isinstance(part, dict):
+                    parts.append(str(part.get("text", part.get("content", ""))))
+                else:
+                    try:
+                        parts.append(str(part))
+                    except Exception:
+                        pass
+            return "".join(parts)
+
+        # content is None or empty — return "" without exposing raw provider objects
+        return ""
+    except Exception:
+        return ""
+
+
 # ---------------------------------------------------------------------------
 # Rule-based fallback analysis
 # ---------------------------------------------------------------------------
@@ -378,9 +428,12 @@ def _try_ai_analysis(
             max_tokens=800,
         )
 
-        raw_content = response.choices[0].message.content
-        parsed = _parse_ai_json(raw_content)
+        raw_content = _extract_message_text(response)
+        if not raw_content:
+            # Signal empty response to caller so it can show a helpful fallback message
+            return {"__empty_response": True}
 
+        parsed = _parse_ai_json(raw_content)
         if parsed is None:
             return None
 
@@ -477,6 +530,14 @@ def analyze_answer_with_ai(
             wpm=wpm,
         )
         if ai_result is not None:
+            if ai_result.get("__empty_response"):
+                # Provider connected but returned empty text; use fallback with a note
+                fb = _fallback_analysis(transcript, question, role)
+                fb["content_weak_points"].insert(
+                    0,
+                    "AI provider returned an empty response, so PitchPilot used offline fallback mode.",
+                )
+                return fb
             ai_result["status"] = "success"
             ai_result["model_used"] = resolved_model
             return ai_result
@@ -543,29 +604,30 @@ def test_ai_connection(
 
         client = OpenAI(**client_kwargs)
 
-        # Minimal test request
+        # Minimal test request — clear and deterministic for any provider
         response = client.chat.completions.create(
             model=resolved_model,
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": "Say hello in one word."},
+                {"role": "user", "content": "Reply with exactly: OK"},
             ],
             temperature=0.0,
-            max_tokens=10,
+            max_tokens=20,
         )
 
-        content = response.choices[0].message.content
-        if content and content.strip():
+        text = _extract_message_text(response)
+        if text and text.strip():
             return {
                 "status": "success",
-                "message": f"Connection successful. Provider responded: \"{content.strip()}\"",
+                "message": f"Connection successful. Provider responded: \"{text.strip()}\"",
                 "model_used": resolved_model,
                 "mode": "real_ai",
             }
         else:
+            # Choices exist but text is empty — provider is reachable
             return {
-                "status": "error",
-                "message": "Connection succeeded but received empty response.",
+                "status": "success",
+                "message": "AI provider connected successfully. No text content was returned by the health-check prompt, but the provider is reachable.",
                 "model_used": resolved_model,
                 "mode": "real_ai",
             }

@@ -120,6 +120,13 @@ with section_card("Temporary Session Settings"):
         )
         save_settings = st.form_submit_button("💾 Save Temporary Settings", type="primary")
 
+    st.info(
+        "💡 **Provider hints:**\n"
+        "- **OpenAI:** leave Base URL empty, use model `gpt-4o-mini`\n"
+        "- **Gemini:** Base URL `https://generativelanguage.googleapis.com/v1beta/openai/`, use model `gemini-1.5-flash`\n"
+        "- **Groq:** Base URL `https://api.groq.com/openai/v1`, use model `llama3-8b-8192`"
+    )
+
     if save_settings:
         if temp_api_key_input.strip():
             st.session_state["temp_ai_api_key"] = temp_api_key_input.strip()
