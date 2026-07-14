@@ -3,10 +3,76 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --bg-main: #07111f;
+    --bg-sidebar: #080f1e;
+    --bg-card: #111a2e;
+    --bg-card-alt: #151f33;
+    --border: rgba(148, 163, 184, 0.18);
+    --primary: #60a5fa;
+    --cyan: #22d3ee;
+    --purple: #8b5cf6;
+    --text-primary: #e5edff;
+    --text-secondary: #94a3b8;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+  }
+
   html {
     scroll-behavior: smooth;
   }
+
   body {
+    background: var(--bg-main);
+    color: var(--text-primary);
     @apply antialiased;
+  }
+
+  ::selection {
+    background: rgba(96, 165, 250, 0.3);
+    color: #e5edff;
+  }
+}
+
+@layer components {
+  .glass-card {
+    background: rgba(17, 26, 46, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
+  }
+
+  .gradient-border {
+    position: relative;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, rgba(96, 165, 250, 0.15), rgba(139, 92, 246, 0.15));
+    padding: 1px;
+  }
+
+  .gradient-border-inner {
+    background: var(--bg-card);
+    border-radius: calc(1rem - 1px);
+    padding: 1.25rem;
+  }
+
+  .btn-primary {
+    @apply relative overflow-hidden rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-all;
+    background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    @apply rounded-xl border border-slate-700/60 bg-slate-800/60 px-5 py-2.5 text-sm font-medium text-slate-300 transition-all;
+  }
+
+  .btn-secondary:hover {
+    background: rgba(148, 163, 184, 0.12);
+    border-color: rgba(148, 163, 184, 0.3);
   }
 }
