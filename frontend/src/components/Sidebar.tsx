@@ -11,6 +11,7 @@ import {
   Crown,
   ChevronRight,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const NAV = [
   { label: "Home", path: "/", icon: Home },
@@ -24,6 +25,12 @@ const NAV = [
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
+
+  const displayName = isAuthenticated && user ? user.name : "Guest";
+  const displaySub =
+    isAuthenticated && user ? user.email : "Not signed in";
+  const avatarLetter = (isAuthenticated && user ? user.name : "G").trim().charAt(0).toUpperCase();
 
   return (
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-[260px] flex-col border-r border-slate-700/20 bg-[#080f1e] md:flex">
@@ -81,13 +88,17 @@ export default function Sidebar() {
       {/* User mini */}
       <div className="mx-4 mb-4 flex items-center gap-3 rounded-xl border border-slate-700/30 bg-slate-800/40 px-4 py-3">
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 text-xs font-bold text-white">
-          U
+          {avatarLetter || "U"}
         </div>
-        <div className="flex-1">
-          <p className="text-xs font-medium text-slate-200">User</p>
-          <p className="text-[10px] text-slate-500">Free Plan</p>
+        <div className="flex-1 min-w-0">
+          <p className="truncate text-xs font-medium text-slate-200">{displayName}</p>
+          <p className="truncate text-[10px] text-slate-500">{displaySub}</p>
         </div>
-        <div className="h-2 w-2 rounded-full bg-emerald-400 shadow shadow-emerald-400/40" />
+        <div
+          className={`h-2 w-2 rounded-full ${
+            isAuthenticated ? "bg-emerald-400 shadow shadow-emerald-400/40" : "bg-slate-500"
+          }`}
+        />
       </div>
     </aside>
   );

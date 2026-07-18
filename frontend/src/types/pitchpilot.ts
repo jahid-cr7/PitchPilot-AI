@@ -116,3 +116,34 @@ export interface ReportExportResponse {
   filename: string;
   content: string;
 }
+
+export interface FullAnalysisResponse {
+  status: string;
+  session_id?: number | null;
+  save_warning?: string | null;
+  video_result: Record<string, unknown>;
+  camera_result: Record<string, unknown>;
+  speech_result: Record<string, unknown>;
+  ai_result: Record<string, unknown>;
+  final_feedback: Record<string, unknown>;
+}
+
+// ---------------------------------------------------------------------------
+// Auth
+// ---------------------------------------------------------------------------
+export interface AuthUser {
+  id: number;
+  name: string;
+  email: string;
+  created_at?: string | null;
+}
+
+export interface AuthTokenResponse {
+  access_token: string;
+  token_type: string;
+  user: AuthUser;
+}
+
+export interface MeResponse {
+  user: AuthUser;
+}

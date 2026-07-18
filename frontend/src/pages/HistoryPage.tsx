@@ -226,7 +226,7 @@ export default function HistoryPage() {
           </GradientButton>
         </div>
         <EmptyState
-          title="No sessions yet"
+          title="No practice sessions yet."
           message="Your practice sessions will appear here once you complete your first recording."
         />
       </div>

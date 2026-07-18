@@ -129,6 +129,8 @@ export default function FeedbackPage() {
   const modelUsed = String(ai.model_used ?? fb.model_used ?? "—");
 
   const badge = getPerformanceBadge(performanceLevel);
+  const sessionId = analysis?.meta.sessionId ?? null;
+  const saveWarning = String(analysis?.result?.save_warning ?? "");
 
   async function handleExportHtml() {
     const sid = analysis?.meta.sessionId;
@@ -224,9 +226,13 @@ export default function FeedbackPage() {
             {analysis.meta.fileName} — {new Date(analysis.meta.analyzedAt).toLocaleString()}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {analysis.meta.sessionId ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {sessionId ? (
             <>
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-medium text-emerald-300">
+                <CheckCircle className="h-3 w-3" />
+                Saved to History
+              </div>
               <GradientButton
                 variant="secondary"
                 onClick={handleExportHtml}
@@ -244,6 +250,10 @@ export default function FeedbackPage() {
                 {exporting === "csv" ? "Exporting…" : "Export CSV"}
               </GradientButton>
             </>
+          ) : saveWarning ? (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-300">
+              {saveWarning}
+            </div>
           ) : (
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-300">
               Analysis complete. Save-to-history endpoint will be added next.
@@ -263,9 +273,9 @@ export default function FeedbackPage() {
         <GradientButton variant="secondary" onClick={() => navigate("/history")}>
           <History className="mr-1.5 inline h-3.5 w-3.5" /> View History
         </GradientButton>
-        {analysis.meta.sessionId && (
+        {sessionId && (
           <GradientButton variant="ghost" onClick={() => navigate(`/history`)}>
-            <ChevronRight className="mr-1.5 inline h-3.5 w-3.5" /> History Detail
+            <ChevronRight className="mr-1.5 inline h-3.5 w-3.5" /> Open in History
           </GradientButton>
         )}
       </div>

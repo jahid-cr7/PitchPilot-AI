@@ -177,7 +177,15 @@ export default function PracticePage() {
       };
       localStorage.setItem("pp_last_analysis", JSON.stringify(payload));
 
-      showToast("Full analysis complete!", "success");
+      const saveWarning = res.save_warning as string | undefined;
+      const sid = res.session_id as number | undefined | null;
+      if (sid) {
+        showToast("Analysis saved to history.", "success");
+      } else if (saveWarning) {
+        showToast(saveWarning, "warning");
+      } else {
+        showToast("Full analysis complete!", "success");
+      }
       navigate("/feedback");
     } catch (e) {
       clearTimers();

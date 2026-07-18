@@ -114,7 +114,7 @@ export default function DashboardPage() {
           </GradientButton>
         </div>
         <EmptyState
-          title="No sessions yet"
+          title="No practice sessions yet."
           message="Complete a practice session to see your dashboard stats and progress."
         />
       </div>

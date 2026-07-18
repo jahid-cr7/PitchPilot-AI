@@ -87,7 +87,9 @@ frontend/
 
 ## Features
 
-- **Home:** Hero, feature cards, quick stats
-- **Practice:** Mode selector, question bank, random picker, role input
-- **Feedback:** AI Coach transcript analysis with strengths/weak points
+- **Home:** Hero, feature cards, quick stats, backend status
+- **Practice:** Mode selector, question bank, random picker, role input, MP4 dropzone with validation, simulated progress animation, full analysis pipeline
+- **Feedback:** Animated score ring, dimension breakdown, strengths/weak points, transcript preview, next practice task, AI model display, export HTML/CSV (when session_id exists)
+- **Dashboard:** KPI cards, score progression chart, skill breakdown, recent activity table, refresh button
+- **History:** Filter tabs (Today/This Week/All Time), session list sorted newest-first, detail panel with scores/transcript/metadata, report export, delete confirmation, refresh button
 - **Settings:** Backend URL config, API docs link, provider hints
