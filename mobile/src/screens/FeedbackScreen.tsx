@@ -66,7 +66,7 @@ export default function FeedbackScreen({ onBack, mode, question, role }: Feedbac
   if (loading) {
     return (
       <SafeAreaView edges={['bottom']} style={styles.container}>
-        <AppHeader title="AI Coach" showBack onBack={onBack} />
+          <AppHeader title="AI Coach" onBack={onBack} />
         <LoadingState message="Running AI Coach..." />
       </SafeAreaView>
     );
@@ -74,7 +74,7 @@ export default function FeedbackScreen({ onBack, mode, question, role }: Feedbac
 
   return (
     <SafeAreaView edges={['bottom']} style={styles.container}>
-      <AppHeader title="AI Coach" showBack onBack={onBack} />
+      <AppHeader title="AI Coach" onBack={onBack} />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {error ? (
           <Card variant="dark">

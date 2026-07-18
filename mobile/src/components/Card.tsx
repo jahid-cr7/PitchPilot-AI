@@ -8,7 +8,7 @@ interface CardProps {
   variant?: 'light' | 'dark';
 }
 
-export default function Card({ children, style, variant = 'light' }: CardProps) {
+export default function Card({ children, style, variant = 'dark' }: CardProps) {
   const isDark = variant === 'dark';
   return (
     <View
@@ -32,10 +32,12 @@ const styles = StyleSheet.create({
   },
   lightCard: {
     backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   darkCard: {
-    backgroundColor: colors.cardDark,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.borderDark,
+    borderColor: colors.border,
   },
 });

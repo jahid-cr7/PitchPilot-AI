@@ -84,7 +84,7 @@ export default function PracticeScreen({ onBack, onGoToFeedback }: PracticeScree
   if (loadingModes) {
     return (
       <SafeAreaView edges={['bottom']} style={styles.container}>
-        <AppHeader title="Practice" showBack onBack={onBack} />
+          <AppHeader title="Practice" onBack={onBack} />
         <LoadingState message="Loading practice modes..." />
       </SafeAreaView>
     );
@@ -92,7 +92,7 @@ export default function PracticeScreen({ onBack, onGoToFeedback }: PracticeScree
 
   return (
     <SafeAreaView edges={['bottom']} style={styles.container}>
-      <AppHeader title="Practice" showBack onBack={onBack} />
+      <AppHeader title="Practice" onBack={onBack} />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {error ? (
           <Card variant="dark">

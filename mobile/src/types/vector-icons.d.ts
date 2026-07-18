@@ -1,0 +1,15 @@
+declare module '@expo/vector-icons' {
+  import { ComponentType } from 'react';
+  import { TextProps } from 'react-native';
+
+  export interface IconProps extends TextProps {
+    name: string;
+    size?: number;
+    color?: string;
+  }
+
+  export class Ionicons extends React.Component<IconProps> {}
+  export class MaterialIcons extends React.Component<IconProps> {}
+  export class FontAwesome extends React.Component<IconProps> {}
+  export class MaterialCommunityIcons extends React.Component<IconProps> {}
+}

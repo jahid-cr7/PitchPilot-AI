@@ -1,15 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, borderRadius } from '../theme/theme';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import * as Sharing from 'expo-sharing';
+import { cacheDirectory, writeAsStringAsync } from 'expo-file-system/legacy';
+import { colors, spacing, fontSize, borderRadius } from '../theme';
 import {
   getSessions,
   getSessionDetail,
@@ -18,15 +14,31 @@ import {
   exportCsvReport,
 } from '../api/pitchpilotApi';
 import { SessionSummary, SessionDetail } from '../types/pitchpilot';
-import Card from '../components/Card';
-import PrimaryButton from '../components/PrimaryButton';
-import LoadingState from '../components/LoadingState';
+import GlassCard from '../components/GlassCard';
+import GradientButton from '../components/GradientButton';
+import LoadingOverlay from '../components/LoadingOverlay';
+import ErrorBanner from '../components/ErrorBanner';
 
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
+async function shareContent(filename: string, content: string, mimeType: string) {
+  if (Platform.OS === 'web') {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  const path = (cacheDirectory || '') + filename;
+  await writeAsStringAsync(path, content, { encoding: 'utf8' });
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(path, { mimeType, dialogTitle: `Share ${filename}` });
+  } else {
+    Alert.alert('Sharing unavailable', 'File saved to cache. Please share manually.');
   }
 }
 
@@ -40,58 +52,49 @@ function formatDateShort(iso: string): string {
 
 function getScoreColor(score: number): string {
   if (score >= 80) return colors.success;
-  if (score >= 60) return colors.primaryLight;
+  if (score >= 60) return colors.blue;
   return colors.warning;
 }
 
-type ViewMode = 'list' | 'detail' | 'report';
-
 export default function HistoryScreen() {
-  const [view, setView] = useState<ViewMode>('list');
+  const router = useRouter();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [detail, setDetail] = useState<SessionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [reportContent, setReportContent] = useState<string>('');
-  const [reportFilename, setReportFilename] = useState<string>('');
-  const [reportType, setReportType] = useState<'html' | 'csv' | null>(null);
+  const [exporting, setExporting] = useState<'html' | 'csv' | null>(null);
+
+  const fetchSessions = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getSessions();
+      setSessions(data.sessions || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load sessions.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let mounted = true;
-    getSessions()
-      .then((data) => {
-        if (mounted) setSessions(data.sessions || []);
-      })
-      .catch((err) => {
-        if (mounted) setError(err instanceof Error ? err.message : 'Failed to load sessions.');
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    fetchSessions();
+  }, [fetchSessions]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    getSessions()
-      .then((data) => setSessions(data.sessions || []))
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load sessions.'))
-      .finally(() => setRefreshing(false));
-  }, []);
+    fetchSessions().finally(() => setRefreshing(false));
+  }, [fetchSessions]);
 
   const openDetail = useCallback(async (sessionId: number) => {
     setDetailLoading(true);
-    setView('detail');
     try {
       const data = await getSessionDetail(sessionId);
       setDetail(data.session);
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to load detail.');
-      setView('list');
     } finally {
       setDetailLoading(false);
     }
@@ -109,10 +112,8 @@ export default function HistoryScreen() {
           onPress: async () => {
             try {
               await deleteSession(sessionId);
-              setView('list');
               setDetail(null);
-              const data = await getSessions();
-              setSessions(data.sessions || []);
+              await fetchSessions();
             } catch (err) {
               Alert.alert('Error', err instanceof Error ? err.message : 'Delete failed.');
             }
@@ -120,333 +121,233 @@ export default function HistoryScreen() {
         },
       ]
     );
-  }, []);
+  }, [fetchSessions]);
 
   const handleExportHtml = useCallback(async (sessionId: number) => {
+    setExporting('html');
     try {
       const data = await exportHtmlReport(sessionId);
-      setReportContent(data.content);
-      setReportFilename(data.filename);
-      setReportType('html');
-      setView('report');
+      await shareContent(data.filename, data.content, 'text/html');
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Export failed.');
+      Alert.alert('Export failed', err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setExporting(null);
     }
   }, []);
 
   const handleExportCsv = useCallback(async (sessionId: number) => {
+    setExporting('csv');
     try {
       const data = await exportCsvReport(sessionId);
-      setReportContent(data.content);
-      setReportFilename(data.filename);
-      setReportType('csv');
-      setView('report');
+      await shareContent(data.filename, data.content, 'text/csv');
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Export failed.');
+      Alert.alert('Export failed', err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setExporting(null);
     }
   }, []);
 
   if (loading) {
     return (
-      <SafeAreaView edges={['bottom']} style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>History</Text>
-          <Text style={styles.headerSubtitle}>Your practice sessions</Text>
-        </View>
-        <LoadingState message="Loading sessions..." />
+      <SafeAreaView edges={['top']} style={styles.container}>
+        <LoadingOverlay message="Loading sessions..." />
       </SafeAreaView>
     );
   }
 
-  if (error) {
-    return (
-      <SafeAreaView edges={['bottom']} style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>History</Text>
-          <Text style={styles.headerSubtitle}>Your practice sessions</Text>
-        </View>
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-        >
-          <Card variant="dark">
-            <Text style={styles.errorText}>{error}</Text>
-          </Card>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  if (sessions.length === 0) {
-    return (
-      <SafeAreaView edges={['bottom']} style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>History</Text>
-          <Text style={styles.headerSubtitle}>Your practice sessions</Text>
-        </View>
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-        >
-          <Card variant="dark">
-            <Text style={styles.emptyTitle}>No sessions yet</Text>
-            <Text style={styles.emptyText}>
-              Your practice sessions will appear here once you complete your first recording.
-            </Text>
-          </Card>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  // Report Preview View
-  if (view === 'report') {
-    return (
-      <SafeAreaView edges={['bottom']} style={styles.container}>
-        <View style={styles.detailHeader}>
-          <TouchableOpacity onPress={() => setView('detail')} style={styles.backBtn}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.detailTitle} numberOfLines={1}>
-            {reportFilename}
-          </Text>
-          <View style={styles.backBtn} />
-        </View>
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Card variant="dark">
-            <Text style={styles.reportTypeLabel}>
-              {reportType?.toUpperCase()} Report Preview
-            </Text>
-          </Card>
-          <Card variant="dark">
-            <Text style={styles.reportContent}>{reportContent}</Text>
-          </Card>
-          <View style={styles.bottomSpacer} />
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  // Detail View
-  if (view === 'detail') {
-    return (
-      <SafeAreaView edges={['bottom']} style={styles.container}>
-        <View style={styles.detailHeader}>
-          <TouchableOpacity onPress={() => setView('list')} style={styles.backBtn}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.detailTitle} numberOfLines={1}>
-            Session Detail
-          </Text>
-          <View style={styles.backBtn} />
-        </View>
-
-        {detailLoading || !detail ? (
-          <LoadingState message="Loading session detail..." />
-        ) : (
-          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-            {/* Header */}
-            <Card variant="dark">
-              <Text style={styles.detailSessionName}>
-                {detail.interview_question || `Session #${detail.id}`}
-              </Text>
-              <Text style={styles.detailMeta}>{formatDate(detail.created_at)}</Text>
-              {detail.target_role ? (
-                <Text style={styles.detailMeta}>Role: {detail.target_role}</Text>
-              ) : null}
-              <View style={styles.detailScoreRow}>
-                <Text style={styles.detailScore}>{Math.round(detail.overall_score || 0)}</Text>
-                <Text style={styles.detailScoreLabel}>Overall</Text>
-              </View>
-            </Card>
-
-            {/* Scores */}
-            <Text style={styles.sectionTitle}>Scores</Text>
-            <Card>
-              <ScoreRow label="Video" value={detail.video_score} />
-              <ScoreRow label="Camera" value={detail.camera_score} />
-              <ScoreRow label="Speech" value={detail.speech_score} />
-              <ScoreRow label="Answer" value={detail.answer_score} />
-            </Card>
-
-            {/* Transcript */}
-            {detail.transcript ? (
-              <>
-                <Text style={styles.sectionTitle}>Transcript</Text>
-                <Card variant="dark">
-                  <Text style={styles.detailBody}>{detail.transcript}</Text>
-                </Card>
-              </>
-            ) : null}
-
-            {/* Strengths */}
-            {detail.strengths && detail.strengths.length > 0 ? (
-              <>
-                <Text style={styles.sectionTitle}>Strengths</Text>
-                {detail.strengths.map((s, i) => (
-                  <Card key={`strength-${i}`}>
-                    <Text style={styles.bulletText}>✅ {s}</Text>
-                  </Card>
-                ))}
-              </>
-            ) : null}
-
-            {/* Weak Points */}
-            {detail.weak_points && detail.weak_points.length > 0 ? (
-              <>
-                <Text style={styles.sectionTitle}>Weak Points</Text>
-                {detail.weak_points.map((w, i) => (
-                  <Card key={`weak-${i}`}>
-                    <Text style={styles.bulletText}>⚠️ {w}</Text>
-                  </Card>
-                ))}
-              </>
-            ) : null}
-
-            {/* Summary */}
-            {detail.summary ? (
-              <>
-                <Text style={styles.sectionTitle}>Summary</Text>
-                <Card variant="dark">
-                  <Text style={styles.detailBody}>{detail.summary}</Text>
-                </Card>
-              </>
-            ) : null}
-
-            {/* Next Task */}
-            {detail.next_practice_task ? (
-              <>
-                <Text style={styles.sectionTitle}>Next Practice Task</Text>
-                <Card variant="dark">
-                  <Text style={styles.detailBody}>{detail.next_practice_task}</Text>
-                </Card>
-              </>
-            ) : null}
-
-            {/* Metadata */}
-            <Text style={styles.sectionTitle}>Metadata</Text>
-            <Card variant="dark">
-              {detail.duration_seconds > 0 ? (
-                <MetaRow label="Duration" value={`${Math.round(detail.duration_seconds)}s`} />
-              ) : null}
-              {detail.word_count > 0 ? (
-                <MetaRow label="Words" value={`${detail.word_count}`} />
-              ) : null}
-              {detail.words_per_minute > 0 ? (
-                <MetaRow label="WPM" value={`${Math.round(detail.words_per_minute)}`} />
-              ) : null}
-              {detail.filler_word_count > 0 ? (
-                <MetaRow label="Fillers" value={`${detail.filler_word_count}`} />
-              ) : null}
-              {detail.repeated_word_count > 0 ? (
-                <MetaRow label="Repeats" value={`${detail.repeated_word_count}`} />
-              ) : null}
-              {detail.framing ? <MetaRow label="Framing" value={detail.framing} /> : null}
-              {detail.fps > 0 ? <MetaRow label="FPS" value={`${Math.round(detail.fps)}`} /> : null}
-              {detail.resolution ? <MetaRow label="Resolution" value={detail.resolution} /> : null}
-            </Card>
-
-            {/* Actions */}
-            <View style={styles.actions}>
-              <PrimaryButton
-                title="Export HTML"
-                variant="secondary"
-                onPress={() => handleExportHtml(detail.id)}
-              />
-              <View style={styles.actionSpacer} />
-              <PrimaryButton
-                title="Export CSV"
-                variant="secondary"
-                onPress={() => handleExportCsv(detail.id)}
-              />
-              <View style={styles.actionSpacer} />
-              <PrimaryButton
-                title="Delete Session"
-                variant="outline"
-                onPress={() => handleDelete(detail.id)}
-              />
-            </View>
-
-            <View style={styles.bottomSpacer} />
-          </ScrollView>
-        )}
-      </SafeAreaView>
-    );
-  }
-
-  // List View
   return (
-    <SafeAreaView edges={['bottom']} style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>History</Text>
-        <Text style={styles.headerSubtitle}>Your practice sessions</Text>
-      </View>
+    <SafeAreaView edges={['top']} style={styles.container}>
+      {exporting && (
+        <LoadingOverlay message={exporting === 'html' ? 'Exporting HTML...' : 'Exporting CSV...'} />
+      )}
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.cyan} />}
       >
-        {sessions.map((s: SessionSummary) => (
-          <TouchableOpacity key={s.id} onPress={() => openDetail(s.id)} activeOpacity={0.8}>
-            <Card variant="dark">
-              <View style={styles.sessionRow}>
-                <View style={styles.sessionInfo}>
-                  <Text style={styles.sessionName} numberOfLines={1}>
-                    {s.interview_question || `Session #${s.id}`}
-                  </Text>
-                  <Text style={styles.sessionMeta}>
-                    {formatDateShort(s.created_at)} · {s.target_role || 'No role'}
-                  </Text>
-                </View>
-                <View style={styles.sessionScoreCol}>
-                  <Text
-                    style={[
-                      styles.sessionScore,
-                      { color: getScoreColor(Math.round(s.overall_score || 0)) },
-                    ]}
-                  >
-                    {Math.round(s.overall_score || 0)}
-                  </Text>
-                  <Text style={styles.sessionLevel}>{s.performance_level}</Text>
-                </View>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>History</Text>
+          <Text style={styles.headerSubtitle}>Your practice sessions</Text>
+        </View>
+
+        {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
+
+        {sessions.length === 0 ? (
+          <GlassCard>
+            <View style={styles.empty}>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons name="time-outline" size={32} color={colors.textMuted} />
               </View>
-            </Card>
-          </TouchableOpacity>
-        ))}
+              <Text style={styles.emptyTitle}>No sessions yet</Text>
+              <Text style={styles.emptyText}>
+                Complete a practice session to see your history here.
+              </Text>
+              <GradientButton
+                title="Start Practice"
+                onPress={() => router.push('/practice')}
+                style={{ marginTop: spacing.lg }}
+              />
+            </View>
+          </GlassCard>
+        ) : (
+          <>
+            {/* Session List */}
+            {!detail && sessions.map((s) => (
+              <TouchableOpacity
+                key={s.id}
+                activeOpacity={0.85}
+                onPress={() => openDetail(s.id)}
+              >
+                <GlassCard>
+                  <View style={styles.sessionRow}>
+                    <View style={styles.sessionInfo}>
+                      <Text style={styles.sessionName} numberOfLines={1}>
+                        {s.interview_question || `Session #${s.id}`}
+                      </Text>
+                      <Text style={styles.sessionMeta}>
+                        {formatDateShort(s.created_at)} · {s.target_role || 'No role'}
+                      </Text>
+                    </View>
+                    <View style={styles.sessionScoreCol}>
+                      <Text style={[styles.sessionScore, { color: getScoreColor(Math.round(s.overall_score || 0)) }]}>
+                        {Math.round(s.overall_score || 0)}
+                      </Text>
+                      <Text style={styles.sessionLevel}>{s.performance_level}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                  </View>
+                </GlassCard>
+              </TouchableOpacity>
+            ))}
+
+            {/* Detail View */}
+            {detail && (
+              <>
+                <TouchableOpacity onPress={() => setDetail(null)} style={styles.backRow} activeOpacity={0.7}>
+                  <Ionicons name="arrow-back" size={18} color={colors.blue} />
+                  <Text style={styles.backText}>Back to list</Text>
+                </TouchableOpacity>
+
+                {detailLoading ? (
+                  <LoadingOverlay message="Loading detail..." />
+                ) : (
+                  <>
+                    <GlassCard>
+                      <Text style={styles.detailName}>
+                        {detail.interview_question || `Session #${detail.id}`}
+                      </Text>
+                      <Text style={styles.detailMeta}>{formatDateShort(detail.created_at)}</Text>
+                      {detail.target_role ? (
+                        <Text style={styles.detailMeta}>Role: {detail.target_role}</Text>
+                      ) : null}
+                      <View style={styles.detailScoreRow}>
+                        <Text style={styles.detailScore}>{Math.round(detail.overall_score || 0)}</Text>
+                        <Text style={styles.detailScoreLabel}>Overall</Text>
+                      </View>
+                    </GlassCard>
+
+                    <Text style={styles.sectionLabel}>Scores</Text>
+                    <GlassCard>
+                      <ScoreRow label="Video" value={detail.video_score} color={colors.blue} />
+                      <ScoreRow label="Camera" value={detail.camera_score} color={colors.cyan} />
+                      <ScoreRow label="Speech" value={detail.speech_score} color={colors.purple} />
+                      <ScoreRow label="Answer" value={detail.answer_score} color={colors.success} />
+                    </GlassCard>
+
+                    {detail.transcript ? (
+                      <>
+                        <Text style={styles.sectionLabel}>Transcript</Text>
+                        <GlassCard>
+                          <Text style={styles.transcript}>{detail.transcript}</Text>
+                        </GlassCard>
+                      </>
+                    ) : null}
+
+                    {detail.strengths && detail.strengths.length > 0 && (
+                      <>
+                        <Text style={styles.sectionLabel}>Strengths</Text>
+                        <GlassCard>
+                          {detail.strengths.map((s, i) => (
+                            <View key={i} style={styles.listItem}>
+                              <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                              <Text style={styles.listText}>{s}</Text>
+                            </View>
+                          ))}
+                        </GlassCard>
+                      </>
+                    )}
+
+                    {detail.weak_points && detail.weak_points.length > 0 && (
+                      <>
+                        <Text style={styles.sectionLabel}>Growth Areas</Text>
+                        <GlassCard>
+                          {detail.weak_points.map((w, i) => (
+                            <View key={i} style={styles.listItem}>
+                              <Ionicons name="alert-circle" size={16} color={colors.danger} />
+                              <Text style={styles.listText}>{w}</Text>
+                            </View>
+                          ))}
+                        </GlassCard>
+                      </>
+                    )}
+
+                    {detail.next_practice_task ? (
+                      <>
+                        <Text style={styles.sectionLabel}>Next Milestone</Text>
+                        <GlassCard>
+                          <View style={styles.listItem}>
+                            <Ionicons name="flag" size={16} color={colors.warning} />
+                            <Text style={styles.listText}>{detail.next_practice_task}</Text>
+                          </View>
+                        </GlassCard>
+                      </>
+                    ) : null}
+
+                    <View style={styles.actions}>
+                      <GradientButton
+                        title={exporting === 'html' ? 'Exporting...' : 'Export HTML'}
+                        variant="secondary"
+                        onPress={() => handleExportHtml(detail.id)}
+                        disabled={exporting === 'html'}
+                      />
+                      <View style={styles.actionSpacer} />
+                      <GradientButton
+                        title={exporting === 'csv' ? 'Exporting...' : 'Export CSV'}
+                        variant="secondary"
+                        onPress={() => handleExportCsv(detail.id)}
+                        disabled={exporting === 'csv'}
+                      />
+                      <View style={styles.actionSpacer} />
+                      <GradientButton
+                        title="Delete Session"
+                        variant="outline"
+                        onPress={() => handleDelete(detail.id)}
+                      />
+                    </View>
+                  </>
+                )}
+              </>
+            )}
+          </>
+        )}
+
         <View style={styles.bottomSpacer} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function ScoreRow({ label, value }: { label: string; value: number }) {
+function ScoreRow({ label, value, color }: { label: string; value: number; color: string }) {
   const pct = Math.min(100, Math.max(0, value || 0));
   return (
     <View style={styles.scoreRow}>
       <View style={styles.scoreRowHeader}>
         <Text style={styles.scoreRowLabel}>{label}</Text>
-        <Text style={styles.scoreRowValue}>{Math.round(pct)}</Text>
+        <Text style={[styles.scoreRowValue, { color }]}>{Math.round(pct)}</Text>
       </View>
       <View style={styles.progressTrack}>
-        <View
-          style={[
-            styles.progressFill,
-            {
-              width: `${pct}%`,
-              backgroundColor: getScoreColor(pct),
-            },
-          ]}
-        />
+        <View style={[styles.progressFill, { width: `${pct}%`, backgroundColor: color }]} />
       </View>
-    </View>
-  );
-}
-
-function MetaRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.metaRow}>
-      <Text style={styles.metaLabel}>{label}</Text>
-      <Text style={styles.metaValue}>{value}</Text>
     </View>
   );
 }
@@ -456,10 +357,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
+  scroll: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingBottom: 100,
+  },
+  header: {
+    paddingVertical: spacing.md,
+    marginBottom: spacing.sm,
   },
   headerTitle: {
     fontSize: fontSize.xl,
@@ -467,17 +371,37 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   headerSubtitle: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
-  scroll: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
+  empty: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(168,179,207,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginTop: spacing.md,
+  },
+  emptyText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    lineHeight: 20,
   },
   sessionRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
   sessionInfo: {
@@ -492,10 +416,11 @@ const styles = StyleSheet.create({
   sessionMeta: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    marginTop: spacing.xs,
+    marginTop: 2,
   },
   sessionScoreCol: {
     alignItems: 'flex-end',
+    marginRight: spacing.sm,
   },
   sessionScore: {
     fontSize: fontSize.lg,
@@ -505,52 +430,20 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textMuted,
     fontWeight: '600',
-    marginTop: spacing.xs,
+    marginTop: 1,
   },
-  emptyTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  emptyText: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-    lineHeight: 20,
-  },
-  errorText: {
-    color: colors.error,
-    fontSize: fontSize.sm,
-    textAlign: 'center',
-  },
-  detailHeader: {
+  backRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-  },
-  backBtn: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    minWidth: 60,
+    marginBottom: spacing.md,
+    gap: spacing.xs,
   },
   backText: {
-    color: colors.primaryLight,
-    fontSize: fontSize.md,
+    fontSize: fontSize.sm,
     fontWeight: '600',
+    color: colors.blue,
   },
-  detailTitle: {
-    color: colors.textPrimary,
-    fontSize: fontSize.lg,
-    fontWeight: '700',
-    textAlign: 'center',
-    flex: 1,
-  },
-  detailSessionName: {
+  detailName: {
     fontSize: fontSize.lg,
     fontWeight: '700',
     color: colors.textPrimary,
@@ -562,24 +455,26 @@ const styles = StyleSheet.create({
   },
   detailScoreRow: {
     alignItems: 'center',
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
   },
   detailScore: {
     fontSize: fontSize.xxl,
     fontWeight: '800',
-    color: colors.primaryLight,
+    color: colors.cyan,
   },
   detailScoreLabel: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
-  sectionTitle: {
-    fontSize: fontSize.md,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginTop: spacing.lg,
+  sectionLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginTop: spacing.xl,
     marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   scoreRow: {
     marginVertical: spacing.sm,
@@ -591,49 +486,39 @@ const styles = StyleSheet.create({
   },
   scoreRowLabel: {
     fontSize: fontSize.sm,
-    color: colors.background,
+    color: colors.textSecondary,
     fontWeight: '600',
   },
   scoreRowValue: {
     fontSize: fontSize.sm,
     fontWeight: '700',
-    color: colors.background,
   },
   progressTrack: {
-    height: 8,
+    height: 6,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.borderDark,
+    backgroundColor: colors.cardBorder,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
     borderRadius: borderRadius.full,
   },
-  detailBody: {
-    fontSize: fontSize.sm,
-    color: colors.textPrimary,
-    lineHeight: 20,
-  },
-  bulletText: {
-    fontSize: fontSize.sm,
-    color: colors.background,
-    lineHeight: 20,
-  },
-  metaRow: {
+  listItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderDark,
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginVertical: 4,
   },
-  metaLabel: {
+  listText: {
+    flex: 1,
     fontSize: fontSize.sm,
     color: colors.textSecondary,
+    lineHeight: 18,
   },
-  metaValue: {
+  transcript: {
     fontSize: fontSize.sm,
-    color: colors.textPrimary,
-    fontWeight: '600',
+    color: colors.textSecondary,
+    lineHeight: 20,
   },
   actions: {
     marginTop: spacing.xl,
@@ -642,19 +527,7 @@ const styles = StyleSheet.create({
   actionSpacer: {
     height: spacing.md,
   },
-  reportTypeLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: '700',
-    color: colors.primaryLight,
-    textAlign: 'center',
-  },
-  reportContent: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
-    fontFamily: 'monospace',
-    lineHeight: 18,
-  },
   bottomSpacer: {
-    height: spacing.xxl,
+    height: spacing.xxxl,
   },
 });

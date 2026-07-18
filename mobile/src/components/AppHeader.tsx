@@ -1,62 +1,77 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize } from '../theme/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, fontSize } from '../theme';
 
 interface AppHeaderProps {
   title: string;
+  subtitle?: string;
   onBack?: () => void;
-  showBack?: boolean;
+  rightAction?: React.ReactNode;
 }
 
-export default function AppHeader({ title, onBack, showBack = false }: AppHeaderProps) {
+export default function AppHeader({ title, subtitle, onBack, rightAction }: AppHeaderProps) {
   return (
-    <SafeAreaView edges={['top']} style={styles.safeArea}>
-      <View style={styles.container}>
-        {showBack ? (
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.spacer} />
-        )}
-        <Text style={styles.title}>{title}</Text>
+    <View style={styles.container}>
+      {onBack ? (
+        <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      ) : (
         <View style={styles.spacer} />
+      )}
+      <View style={styles.center}>
+        <Text style={styles.title}>{title}</Text>
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
-    </SafeAreaView>
+      {rightAction ? (
+        <View style={styles.right}>{rightAction}</View>
+      ) : (
+        <View style={styles.spacer} />
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    backgroundColor: colors.surface,
-  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg,
   },
   backButton: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    minWidth: 60,
-  },
-  backText: {
-    color: colors.primaryLight,
-    fontSize: fontSize.md,
-    fontWeight: '600',
-  },
-  title: {
-    color: colors.textPrimary,
-    fontSize: fontSize.lg,
-    fontWeight: '700',
-    textAlign: 'center',
-    flex: 1,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   spacer: {
-    minWidth: 60,
+    width: 40,
+  },
+  center: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  title: {
+    fontSize: fontSize.lg,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: 0.3,
+  },
+  subtitle: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  right: {
+    width: 40,
+    alignItems: 'flex-end',
   },
 });

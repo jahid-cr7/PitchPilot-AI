@@ -1,102 +1,103 @@
-import {
-  Tabs,
-  TabList,
-  TabTrigger,
-  TabSlot,
-  TabTriggerSlotProps,
-  TabListProps,
-} from 'expo-router/ui';
-import { Pressable, useColorScheme, View, StyleSheet } from 'react-native';
+import React from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, fontSize, spacing } from '../theme';
 
-import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
+const TAB_ITEMS = [
+  { name: 'index', label: 'Home', icon: 'home-outline', activeIcon: 'home' },
+  { name: 'practice', label: 'Practice', icon: 'mic-outline', activeIcon: 'mic' },
+  { name: 'feedback', label: 'Feedback', icon: 'chatbubble-outline', activeIcon: 'chatbubble' },
+  { name: 'settings', label: 'Settings', icon: 'settings-outline', activeIcon: 'settings' },
+];
 
-import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
-
-export default function AppTabs() {
+export default function AppTabs(props: any) {
+  const { state, navigation } = props;
   return (
-    <Tabs>
-      <TabSlot style={{ height: '100%' }} />
-      <TabList asChild>
-        <CustomTabList>
-          <TabTrigger name="home" href="/" asChild>
-            <TabButton>Home</TabButton>
-          </TabTrigger>
-          <TabTrigger name="dashboard" href="/dashboard" asChild>
-            <TabButton>Dashboard</TabButton>
-          </TabTrigger>
-          <TabTrigger name="history" href="/history" asChild>
-            <TabButton>History</TabButton>
-          </TabTrigger>
-          <TabTrigger name="settings" href="/settings" asChild>
-            <TabButton>Settings</TabButton>
-          </TabTrigger>
-        </CustomTabList>
-      </TabList>
-    </Tabs>
-  );
-}
+    <View style={styles.container}>
+      {TAB_ITEMS.map((tab) => {
+        const routeIndex = state.routes.findIndex((r: any) => r.name === tab.name);
+        const isFocused = state.index === routeIndex;
 
-export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps) {
-  return (
-    <Pressable {...props} style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView
-        type={isFocused ? 'backgroundSelected' : 'backgroundElement'}
-        style={styles.tabButtonView}>
-        <ThemedText type="small" themeColor={isFocused ? 'text' : 'textSecondary'}>
-          {children}
-        </ThemedText>
-      </ThemedView>
-    </Pressable>
-  );
-}
+        const onPress = () => {
+          if (routeIndex === -1) return;
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: state.routes[routeIndex].key,
+            canPreventDefault: true,
+          });
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(state.routes[routeIndex].name);
+          }
+        };
 
-export function CustomTabList(props: TabListProps) {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
-
-  return (
-    <View {...props} style={styles.tabListContainer}>
-      <ThemedView type="backgroundElement" style={styles.innerContainer}>
-        <ThemedText type="smallBold" style={styles.brandText}>
-          PitchPilot AI
-        </ThemedText>
-
-        {props.children}
-      </ThemedView>
+        return (
+          <Pressable
+            key={tab.name}
+            onPress={onPress}
+            style={styles.tab}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isFocused }}
+            accessibilityLabel={tab.label}
+          >
+            <View style={[styles.iconWrap, isFocused && styles.iconWrapActive]}>
+              <Ionicons
+                name={isFocused ? (tab.activeIcon as any) : (tab.icon as any)}
+                size={22}
+                color={isFocused ? colors.cyan : colors.textMuted}
+              />
+            </View>
+            <Text style={[styles.label, isFocused && styles.labelActive]}>
+              {tab.label}
+            </Text>
+            {isFocused && <View style={styles.indicator} />}
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  tabListContainer: {
-    position: 'absolute',
-    width: '100%',
-    padding: Spacing.three,
+  container: {
+    flexDirection: 'row',
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.cardBorder,
+    paddingBottom: spacing.md,
+    paddingTop: spacing.sm,
+    height: 70,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
+    gap: 2,
+  },
+  iconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
-    flexDirection: 'row',
+    justifyContent: 'center',
   },
-  innerContainer: {
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.five,
-    borderRadius: Spacing.five,
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexGrow: 1,
-    gap: Spacing.two,
-    maxWidth: MaxContentWidth,
+  iconWrapActive: {
+    backgroundColor: 'rgba(53,215,255,0.08)',
   },
-  brandText: {
-    marginRight: 'auto',
-    color: '#3b82f6',
+  label: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontWeight: '500',
   },
-  pressed: {
-    opacity: 0.7,
+  labelActive: {
+    color: colors.cyan,
+    fontWeight: '700',
   },
-  tabButtonView: {
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.three,
+  indicator: {
+    position: 'absolute',
+    top: -spacing.sm,
+    width: 24,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.cyan,
   },
 });

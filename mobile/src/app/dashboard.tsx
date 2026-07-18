@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, borderRadius } from '../theme/theme';
+import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { getDashboardStats } from '../api/pitchpilotApi';
 import { DashboardStats, SessionSummary } from '../types/pitchpilot';
-import Card from '../components/Card';
-import LoadingState from '../components/LoadingState';
-import ScoreCircle from '../components/ScoreCircle';
+import GlassCard from '../components/GlassCard';
+import LoadingOverlay from '../components/LoadingOverlay';
+import ErrorBanner from '../components/ErrorBanner';
 
 function formatDate(iso: string): string {
   try {
@@ -18,7 +18,7 @@ function formatDate(iso: string): string {
 
 function getLevelColor(level: string): string {
   if (level === 'Excellent') return colors.success;
-  if (level === 'Good') return colors.primaryLight;
+  if (level === 'Good') return colors.blue;
   return colors.warning;
 }
 
@@ -48,136 +48,109 @@ export default function DashboardScreen() {
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     getDashboardStats()
-      .then((data) => setStats(data))
+      .then((data) => {
+        setStats(data);
+        setError(null);
+      })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load dashboard.'))
       .finally(() => setRefreshing(false));
   }, []);
 
   if (loading) {
     return (
-      <SafeAreaView edges={['bottom']} style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Dashboard</Text>
-          <Text style={styles.headerSubtitle}>Track your progress</Text>
-        </View>
-        <LoadingState message="Loading dashboard..." />
-      </SafeAreaView>
-    );
-  }
-
-  if (error) {
-    return (
-      <SafeAreaView edges={['bottom']} style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Dashboard</Text>
-          <Text style={styles.headerSubtitle}>Track your progress</Text>
-        </View>
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-        >
-          <Card variant="dark">
-            <Text style={styles.errorText}>{error}</Text>
-          </Card>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  if (!stats || stats.total_sessions === 0) {
-    return (
-      <SafeAreaView edges={['bottom']} style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Dashboard</Text>
-          <Text style={styles.headerSubtitle}>Track your progress</Text>
-        </View>
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-        >
-          <Card variant="dark">
-            <Text style={styles.emptyTitle}>No sessions yet</Text>
-            <Text style={styles.emptyText}>
-              Complete a practice session to see your stats and progress.
-            </Text>
-          </Card>
-        </ScrollView>
+      <SafeAreaView edges={['top']} style={styles.container}>
+        <LoadingOverlay message="Loading dashboard..." />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView edges={['bottom']} style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Dashboard</Text>
-        <Text style={styles.headerSubtitle}>Track your progress</Text>
-      </View>
+    <SafeAreaView edges={['top']} style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.cyan} />}
       >
-        {/* KPIs */}
-        <View style={styles.kpiRow}>
-          <View style={styles.kpiItem}>
-            <ScoreCircle score={Math.round(stats.average_score)} size={90} label="Avg Score" />
-          </View>
-          <View style={styles.kpiItem}>
-            <ScoreCircle score={Math.round(stats.best_score)} size={90} label="Best Score" />
-          </View>
-          <View style={styles.kpiItem}>
-            <ScoreCircle score={Math.round(stats.latest_score)} size={90} label="Latest" />
-          </View>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Dashboard</Text>
+          <Text style={styles.headerSubtitle}>Track your progress</Text>
         </View>
 
-        <View style={styles.kpiCardsRow}>
-          <Card style={styles.kpiCard}>
-            <Text style={styles.kpiValue}>{stats.total_sessions}</Text>
-            <Text style={styles.kpiLabel}>Total Sessions</Text>
-          </Card>
-        </View>
+        {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
-        {/* Skill Breakdown */}
-        <Text style={styles.sectionTitle}>Skill Breakdown</Text>
-        <Card>
-          <SkillRow label="Video / Body" value={stats.average_video_score} color={colors.primaryLight} />
-          <SkillRow label="Camera" value={stats.average_camera_score} color={colors.info} />
-          <SkillRow label="Speech" value={stats.average_speech_score} color={colors.warning} />
-          <SkillRow label="Answer" value={stats.average_answer_score} color={colors.success} />
-        </Card>
-
-        {/* Recent Sessions */}
-        <Text style={styles.sectionTitle}>Recent Sessions</Text>
-        {stats.recent_sessions.length === 0 ? (
-          <Card variant="dark">
-            <Text style={styles.emptyText}>No recent sessions.</Text>
-          </Card>
+        {!stats || stats.total_sessions === 0 ? (
+          <GlassCard>
+            <View style={styles.empty}>
+              <Text style={styles.emptyTitle}>No sessions yet</Text>
+              <Text style={styles.emptyText}>
+                Complete a practice session to see your stats and progress.
+              </Text>
+            </View>
+          </GlassCard>
         ) : (
-          stats.recent_sessions.map((s: SessionSummary) => (
-            <Card key={s.id} variant="dark">
-              <View style={styles.sessionRow}>
-                <View style={styles.sessionInfo}>
-                  <Text style={styles.sessionName} numberOfLines={1}>
-                    {s.interview_question || `Session #${s.id}`}
-                  </Text>
-                  <Text style={styles.sessionMeta}>
-                    {formatDate(s.created_at)} · {s.target_role || 'No role'}
-                  </Text>
-                </View>
-                <View style={styles.sessionScoreCol}>
-                  <Text style={styles.sessionScore}>{Math.round(s.overall_score || 0)}</Text>
-                  <Text style={[styles.sessionLevel, { color: getLevelColor(s.performance_level) }]}>
-                    {s.performance_level}
-                  </Text>
-                </View>
-              </View>
-            </Card>
-          ))
+          <>
+            {/* KPI Grid */}
+            <View style={styles.kpiGrid}>
+              <KpiCard label="Sessions" value={stats.total_sessions} color={colors.blue} />
+              <KpiCard label="Avg Score" value={Math.round(stats.average_score || 0)} color={colors.cyan} />
+              <KpiCard label="Best" value={Math.round(stats.best_score || 0)} color={colors.purple} />
+              <KpiCard label="Latest" value={Math.round(stats.latest_score || 0)} color={colors.success} />
+            </View>
+
+            {/* Skill Breakdown */}
+            <Text style={styles.sectionLabel}>Skill Breakdown</Text>
+            <GlassCard>
+              <SkillRow label="Video / Body" value={stats.average_video_score} color={colors.blue} />
+              <SkillRow label="Camera" value={stats.average_camera_score} color={colors.cyan} />
+              <SkillRow label="Speech" value={stats.average_speech_score} color={colors.purple} />
+              <SkillRow label="Answer" value={stats.average_answer_score} color={colors.success} />
+            </GlassCard>
+
+            {/* Recent Sessions */}
+            <Text style={styles.sectionLabel}>Recent Sessions</Text>
+            {stats.recent_sessions.length === 0 ? (
+              <GlassCard>
+                <Text style={styles.emptyText}>No recent sessions.</Text>
+              </GlassCard>
+            ) : (
+              stats.recent_sessions.map((s: SessionSummary) => (
+                <GlassCard key={s.id}>
+                  <View style={styles.sessionRow}>
+                    <View style={styles.sessionInfo}>
+                      <Text style={styles.sessionName} numberOfLines={1}>
+                        {s.interview_question || `Session #${s.id}`}
+                      </Text>
+                      <Text style={styles.sessionMeta}>
+                        {formatDate(s.created_at)} · {s.target_role || 'No role'}
+                      </Text>
+                    </View>
+                    <View style={styles.sessionScoreCol}>
+                      <Text style={[styles.sessionScore, { color: getLevelColor(s.performance_level) }]}>
+                        {Math.round(s.overall_score || 0)}
+                      </Text>
+                      <Text style={[styles.sessionLevel, { color: getLevelColor(s.performance_level) }]}>
+                        {s.performance_level}
+                      </Text>
+                    </View>
+                  </View>
+                </GlassCard>
+              ))
+            )}
+          </>
         )}
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function KpiCard({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <GlassCard style={styles.kpiCard} noBorder>
+      <Text style={[styles.kpiValue, { color }]}>{value}</Text>
+      <Text style={styles.kpiLabel}>{label}</Text>
+    </GlassCard>
   );
 }
 
@@ -202,9 +175,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.sm,
   },
   headerTitle: {
     fontSize: fontSize.xl,
@@ -212,46 +184,59 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   headerSubtitle: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
   scroll: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: 100,
   },
-  kpiRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: spacing.lg,
-  },
-  kpiItem: {
+  empty: {
     alignItems: 'center',
+    paddingVertical: spacing.xl,
   },
-  kpiCardsRow: {
+  emptyTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  emptyText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    lineHeight: 20,
+  },
+  kpiGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
     marginBottom: spacing.lg,
   },
   kpiCard: {
-    flex: 1,
+    width: '47%',
     alignItems: 'center',
+    paddingVertical: spacing.lg,
   },
   kpiValue: {
-    fontSize: fontSize.xl,
+    fontSize: fontSize.xxl,
     fontWeight: '800',
-    color: colors.primaryLight,
   },
   kpiLabel: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginTop: 2,
+    fontWeight: '600',
   },
-  sectionTitle: {
-    fontSize: fontSize.md,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginTop: spacing.lg,
+  sectionLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginTop: spacing.xl,
     marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   skillRow: {
     marginVertical: spacing.sm,
@@ -263,7 +248,7 @@ const styles = StyleSheet.create({
   },
   skillLabel: {
     fontSize: fontSize.sm,
-    color: colors.background,
+    color: colors.textSecondary,
     fontWeight: '600',
   },
   skillValue: {
@@ -271,9 +256,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   progressTrack: {
-    height: 8,
+    height: 6,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.borderDark,
+    backgroundColor: colors.cardBorder,
     overflow: 'hidden',
   },
   progressFill: {
@@ -297,7 +282,7 @@ const styles = StyleSheet.create({
   sessionMeta: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    marginTop: spacing.xs,
+    marginTop: 2,
   },
   sessionScoreCol: {
     alignItems: 'flex-end',
@@ -305,32 +290,13 @@ const styles = StyleSheet.create({
   sessionScore: {
     fontSize: fontSize.lg,
     fontWeight: '800',
-    color: colors.primaryLight,
   },
   sessionLevel: {
     fontSize: fontSize.xs,
     fontWeight: '600',
-    marginTop: spacing.xs,
-  },
-  emptyTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    textAlign: 'center',
-  },
-  emptyText: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-    lineHeight: 20,
-  },
-  errorText: {
-    color: colors.error,
-    fontSize: fontSize.sm,
-    textAlign: 'center',
+    marginTop: 1,
   },
   bottomSpacer: {
-    height: spacing.xxl,
+    height: spacing.xxxl,
   },
 });
