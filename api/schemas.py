@@ -225,6 +225,44 @@ class DashboardStatsResponse(BaseModel):
     recent_sessions: List[SessionSummary]
 
 
+# ---------------------------------------------------------------------------
+# User Analytics & Profile
+# ---------------------------------------------------------------------------
+class SkillAverages(BaseModel):
+    video: float = 0.0
+    camera: float = 0.0
+    speech: float = 0.0
+    answer: float = 0.0
+
+
+class ScoreTrendPoint(BaseModel):
+    date: str
+    score: float
+
+
+class UserAnalyticsResponse(BaseModel):
+    status: str = "success"
+    total_sessions: int
+    average_score: float
+    best_score: float
+    latest_score: float
+    score_trend: List[ScoreTrendPoint]
+    skill_averages: SkillAverages
+    top_strengths: List[str]
+    common_weaknesses: List[str]
+    recent_sessions: List[SessionSummary]
+
+
+class UserProfileResponse(BaseModel):
+    status: str = "success"
+    id: int
+    name: str
+    email: str
+    created_at: Optional[str] = None
+    total_sessions: int
+    latest_session_date: Optional[str] = None
+
+
 class ReportExportResponse(BaseModel):
     status: str
     filename: str

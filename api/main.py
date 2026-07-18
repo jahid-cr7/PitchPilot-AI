@@ -561,6 +561,38 @@ async def dashboard_stats(
 
 
 # ---------------------------------------------------------------------------
+# User Analytics & Profile
+# ---------------------------------------------------------------------------
+@app.get(
+    "/api/v1/users/me/analytics",
+    response_model=schemas.UserAnalyticsResponse,
+    responses={401: {"model": schemas.ErrorResponse}, 500: {"model": schemas.ErrorResponse}},
+)
+async def user_analytics(
+    user: dict = Depends(get_current_user),
+) -> schemas.UserAnalyticsResponse:
+    """Return progress analytics for the authenticated user only.
+
+    Never reads another user's sessions: every query is scoped by user_id.
+    """
+    data = services.get_user_analytics(user_id=int(user["id"]))
+    return schemas.UserAnalyticsResponse(status="success", **data)
+
+
+@app.get(
+    "/api/v1/users/me/profile",
+    response_model=schemas.UserProfileResponse,
+    responses={401: {"model": schemas.ErrorResponse}, 500: {"model": schemas.ErrorResponse}},
+)
+async def user_profile(
+    user: dict = Depends(get_current_user),
+) -> schemas.UserProfileResponse:
+    """Return account profile + lightweight activity summary for the caller."""
+    data = services.get_user_profile_summary(user)
+    return schemas.UserProfileResponse(status="success", **data)
+
+
+# ---------------------------------------------------------------------------
 # Report Export
 # ---------------------------------------------------------------------------
 @app.get(

@@ -8,6 +8,7 @@ Cross-platform: uses pathlib for database path resolution.
 """
 
 import json
+import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,9 +17,15 @@ from typing import Any, Dict, List, Optional
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-DB_DIR = Path(__file__).resolve().parent.parent / "data"
-DB_DIR.mkdir(exist_ok=True)
-DB_PATH = DB_DIR / "pitchpilot.db"
+_db_env = os.getenv("PITCHPILOT_DB_PATH", "")
+if _db_env:
+    DB_PATH = Path(_db_env)
+    DB_DIR = DB_PATH.parent
+else:
+    DB_DIR = Path(__file__).resolve().parent.parent / "data"
+    DB_PATH = DB_DIR / "pitchpilot.db"
+
+DB_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -53,7 +60,18 @@ CREATE TABLE IF NOT EXISTS practice_sessions (
     weak_points TEXT,
     next_practice_task TEXT,
     summary TEXT,
-    ai_model_used TEXT
+    ai_model_used TEXT,
+    user_id INTEGER
+);
+"""
+
+CREATE_USERS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL
 );
 """
 
@@ -95,11 +113,24 @@ def _from_json(text: str) -> Any:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+def _ensure_user_id_column(conn: sqlite3.Connection) -> None:
+    """
+    Migration-safe: add user_id column to practice_sessions if it does not exist.
+    Existing rows will have user_id = NULL, preserving history from before auth.
+    """
+    cursor = conn.execute("PRAGMA table_info(practice_sessions)")
+    columns = {row[1] for row in cursor.fetchall()}
+    if "user_id" not in columns:
+        conn.execute("ALTER TABLE practice_sessions ADD COLUMN user_id INTEGER")
+
+
 def init_db() -> None:
     """Initialize the database and create tables if they do not exist."""
     try:
         conn = _get_conn()
         conn.execute(CREATE_TABLE_SQL)
+        conn.execute(CREATE_USERS_TABLE_SQL)
+        _ensure_user_id_column(conn)
         conn.commit()
         conn.close()
     except Exception as exc:
@@ -113,6 +144,7 @@ def save_practice_session(
     ai_result: Optional[dict],
     final_feedback: Optional[dict],
     video_filename: str = "",
+    user_id: Optional[int] = None,
 ) -> int:
     """
     Save a completed practice session to the database.
@@ -163,6 +195,7 @@ def save_practice_session(
         "next_practice_task": _safe_get(final_feedback, "next_practice_task", ""),
         "summary": _safe_get(final_feedback, "summary", ""),
         "ai_model_used": _safe_get(ai_result, "model_used", ""),
+        "user_id": user_id,
     }
 
     columns = ", ".join(row.keys())
@@ -178,14 +211,17 @@ def save_practice_session(
     return session_id
 
 
-def get_all_sessions(limit: int = 50) -> List[Dict[str, Any]]:
+def get_all_sessions(limit: int = 50, user_id: Optional[int] = None) -> List[Dict[str, Any]]:
     """
-    Retrieve all saved sessions ordered newest first.
+    Retrieve saved sessions ordered newest first.
 
     Parameters
     ----------
     limit : int
         Maximum number of sessions to return.
+    user_id : int or None
+        If provided, only return sessions owned by this user. If None, return
+        every session (used by legacy Streamlit paths and admin tooling).
 
     Returns
     -------
@@ -193,10 +229,17 @@ def get_all_sessions(limit: int = 50) -> List[Dict[str, Any]]:
     """
     conn = _get_conn()
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT * FROM practice_sessions ORDER BY created_at DESC LIMIT ?",
-        (limit,),
-    )
+    if user_id is None:
+        cursor.execute(
+            "SELECT * FROM practice_sessions ORDER BY created_at DESC LIMIT ?",
+            (limit,),
+        )
+    else:
+        cursor.execute(
+            "SELECT * FROM practice_sessions WHERE user_id = ? "
+            "ORDER BY created_at DESC LIMIT ?",
+            (user_id, limit),
+        )
     rows = cursor.fetchall()
     conn.close()
 
@@ -265,13 +308,16 @@ def get_dashboard_stats() -> Dict[str, Any]:
     }
 
 
-def delete_session(session_id: int) -> bool:
+def delete_session(session_id: int, user_id: Optional[int] = None) -> bool:
     """
-    Delete a session by ID.
+    Delete a session by ID. If user_id is provided, only delete sessions owned
+    by that user (used by the authenticated API). If None, delete unconditionally
+    (used by legacy Streamlit code paths).
 
     Parameters
     ----------
     session_id : int
+    user_id : int or None
 
     Returns
     -------
@@ -280,8 +326,77 @@ def delete_session(session_id: int) -> bool:
     """
     conn = _get_conn()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM practice_sessions WHERE id = ?", (session_id,))
+    if user_id is None:
+        cursor.execute("DELETE FROM practice_sessions WHERE id = ?", (session_id,))
+    else:
+        cursor.execute(
+            "DELETE FROM practice_sessions WHERE id = ? AND user_id = ?",
+            (session_id, user_id),
+        )
     deleted = cursor.rowcount > 0
     conn.commit()
     conn.close()
     return deleted
+
+
+# ---------------------------------------------------------------------------
+# Users
+# ---------------------------------------------------------------------------
+def create_user(name: str, email: str, password_hash: str) -> Dict[str, Any]:
+    """
+    Insert a new user. Raises ValueError if the email is already taken.
+
+    Returns the created user row (without password_hash).
+    """
+    email_norm = email.strip().lower()
+    name_clean = name.strip()
+    created_at = datetime.now(timezone.utc).isoformat()
+
+    conn = _get_conn()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO users (name, email, password_hash, created_at) "
+            "VALUES (?, ?, ?, ?)",
+            (name_clean, email_norm, password_hash, created_at),
+        )
+        user_id = cursor.lastrowid
+        conn.commit()
+    except sqlite3.IntegrityError as exc:
+        raise ValueError("Email already registered") from exc
+    finally:
+        conn.close()
+
+    return {
+        "id": user_id,
+        "name": name_clean,
+        "email": email_norm,
+        "created_at": created_at,
+    }
+
+
+def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
+    """Return a full user row (including password_hash) by email, or None."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, name, email, password_hash, created_at FROM users "
+        "WHERE email = ?",
+        (email.strip().lower(),),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
+    """Return a user row (without password_hash) by id, or None."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, name, email, created_at FROM users WHERE id = ?",
+        (user_id,),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None

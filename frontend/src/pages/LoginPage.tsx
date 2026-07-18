@@ -9,6 +9,7 @@ import { useToast } from "../components/Toast";
 
 interface LocationState {
   from?: string;
+  message?: string;
 }
 
 export default function LoginPage() {
@@ -23,13 +24,18 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   const from = (location.state as LocationState | null)?.from || "/dashboard";
+  const incomingMessage = (location.state as LocationState | null)?.message;
 
   // If a session-expired message came from AuthContext, surface it here.
   useEffect(() => {
+    if (incomingMessage) {
+      setError(incomingMessage);
+      return;
+    }
     if (authError) {
       setError(authError);
     }
-  }, [authError]);
+  }, [authError, incomingMessage]);
 
   // If somehow rendered while already authenticated, bounce forward.
   useEffect(() => {

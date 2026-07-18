@@ -25,14 +25,7 @@ export default function App() {
             {/* Everything else lives inside the sidebar/topbar layout */}
             <Route element={<Layout />}>
               <Route path="/" element={<HomePage />} />
-              <Route
-                path="/practice"
-                element={
-                  <ProtectedRoute message="Please log in to save your practice history.">
-                    <PracticePage />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/practice" element={<PracticePage />} />
               <Route
                 path="/feedback"
                 element={

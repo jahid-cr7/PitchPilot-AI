@@ -1,0 +1,63 @@
+# PitchPilot AI — Production Docker Compose
+# Runs FastAPI backend + React frontend with persistent SQLite and uploads.
+#
+# Usage:
+#   1. cp .env.production.example .env
+#   2. Edit .env with your real values (especially AI_API_KEY and CORS_ORIGINS)
+#   3. docker compose -f docker-compose.prod.yml up --build -d
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: pitchpilot-api
+    ports:
+      - "8000:8000"
+    environment:
+      - PITCHPILOT_ENV=production
+      - PITCHPILOT_DB_PATH=/app/data/pitchpilot.db
+      - PITCHPILOT_CORS_ORIGINS=${PITCHPILOT_CORS_ORIGINS}
+      - PITCHPILOT_UPLOAD_DIR=/app/uploads
+      - PITCHPILOT_MAX_UPLOAD_MB=${PITCHPILOT_MAX_UPLOAD_MB:-200}
+      - PITCHPILOT_AI_API_KEY=${PITCHPILOT_AI_API_KEY}
+      - PITCHPILOT_AI_BASE_URL=${PITCHPILOT_AI_BASE_URL}
+      - PITCHPILOT_AI_MODEL=${PITCHPILOT_AI_MODEL}
+      - PITCHPILOT_JWT_SECRET=${PITCHPILOT_JWT_SECRET}
+      - PITCHPILOT_JWT_EXPIRES_MINUTES=${PITCHPILOT_JWT_EXPIRES_MINUTES:-1440}
+    volumes:
+      - pitchpilot-data:/app/data
+      - pitchpilot-uploads:/app/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    container_name: pitchpilot-web
+    ports:
+      - "3000:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  pitchpilot-data:
+    driver: local
+  pitchpilot-uploads:
+    driver: local

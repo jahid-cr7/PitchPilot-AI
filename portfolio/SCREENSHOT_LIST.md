@@ -194,10 +194,32 @@ screenshot_XX_descriptive_name.png
 
 Where `XX` is a zero-padded two-digit number.
 
-Store all screenshots in:
+Store all desktop/web screenshots in:
 ```
 portfolio/screenshots/
 ```
+
+Store mobile screenshots in:
+```
+portfolio/screenshots/mobile/
+```
+
+See [`MOBILE_SCREENSHOT_CHECKLIST.md`](MOBILE_SCREENSHOT_CHECKLIST.md) for the mobile-specific capture guide.
+
+---
+
+## Mobile Screenshot Status
+
+| # | Filename | Status |
+|---|----------|--------|
+| 1 | `portfolio/screenshots/mobile/01_mobile_home.png` | Pending |
+| 2 | `portfolio/screenshots/mobile/02_mobile_practice_upload.png` | Pending |
+| 3 | `portfolio/screenshots/mobile/03_mobile_analysis_progress.png` | Pending |
+| 4 | `portfolio/screenshots/mobile/04_mobile_feedback_score.png` | Pending |
+| 5 | `portfolio/screenshots/mobile/05_mobile_settings_backend.png` | Pending |
+| 6 | `portfolio/screenshots/mobile/06_mobile_history_or_export.png` | Pending |
+
+> Mark each row as **Captured** after saving the file to `portfolio/screenshots/mobile/`.
 
 ---
 

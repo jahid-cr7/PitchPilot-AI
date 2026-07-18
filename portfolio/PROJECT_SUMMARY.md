@@ -27,19 +27,25 @@ Job seekers, students, and professionals struggle to get objective, actionable f
 - **Demo Mode** — Loads sample data instantly for presentations and testing without a real video
 - **Role-Based Question Bank** — Curated questions across 7 practice modes (Software Dev, AI/ML, Data Analyst, University, Presentation, Sales, Behavioral) with random question picker
 - **AI Settings** — Configure AI provider, test connections, and manage temporary API keys securely
+- **FastAPI Backend** — Shared REST API serving all clients with automatic session persistence
+- **React Web App** — Premium dark SaaS frontend with animated feedback, charts, and responsive design
+- **Expo Mobile App** — Cross-platform iOS/Android client with video upload, dashboard, and history
+- **Report Export** — Self-contained HTML and CSV reports for every saved session
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
-| **Frontend / App** | Streamlit, Python 3.12+ |
+| **Desktop Demo** | Streamlit, Python 3.12+ |
+| **Web Frontend** | React 18, Vite, TypeScript, Tailwind CSS, Recharts, Framer Motion |
+| **Mobile App** | Expo SDK 57, React Native 0.86, TypeScript |
+| **Backend API** | FastAPI, Uvicorn, Pydantic |
 | **Video / Camera** | OpenCV (Haar Cascade face detection, optical flow) |
 | **Speech** | faster-whisper (ONNX runtime) |
 | **AI Analysis** | OpenAI-compatible LLM API (GPT-4o-mini by default) |
 | **Data** | SQLite (local session storage) |
-| **Dashboard** | Pandas, Streamlit native charts |
+| **Dashboard** | Pandas, Streamlit native charts / Recharts (React) |
 | **Reports** | HTML / CSV export generators |
-| **Server** | Uvicorn (prepared for FastAPI backend expansion) |
 | **DevOps** | Docker, Docker Compose, GitHub Actions CI |
 
 ## AI/ML Components
@@ -71,12 +77,13 @@ Job seekers, students, and professionals struggle to get objective, actionable f
 
 ## What Makes It Real-World
 - **Production-ready architecture** — Modular core analyzers that can be swapped or upgraded independently (e.g., replace Haar Cascade with MediaPipe, replace rule-based AI with fine-tuned model)
-- **Graceful degradation** — Works fully offline with local video, camera, and speech analysis; AI Coach falls back to rule-based scoring without an API key
-- **Cross-platform support** — Tested on Ubuntu and Windows with identical behavior
+- **Multi-platform delivery** — Desktop demo (Streamlit), web app (React), mobile app (Expo), and API backend (FastAPI) all share the same core logic
+- **Graceful degradation** — Works fully offline with local video, camera, and speech analysis; AI Coach falls back to rule-based scoring without an API key; database save failures do not crash the analysis
+- **Cross-platform support** — Tested on Ubuntu and Windows with identical behavior; mobile app supports iOS, Android, and web
 - **Docker & CI ready** — Dockerfile, docker-compose, and GitHub Actions workflow included
-- **Security-conscious** — API keys are never persisted; temporary session keys only, environment-variable based configuration
+- **Security-conscious** — API keys are never persisted, logged, or returned in responses; temporary session keys only, environment-variable based configuration
 - **Data privacy** — All processing happens locally; videos and transcripts never leave the machine unless user explicitly exports reports
-- **Scalable design** — SQLite can be swapped for PostgreSQL; Streamlit frontend can be paired with a FastAPI backend for multi-user deployments
+- **Scalable design** — SQLite can be swapped for PostgreSQL; FastAPI backend is ready for multi-user deployments
 
 ## Ethical Use Note
 PitchPilot AI is designed as a **practice and self-improvement tool only**.

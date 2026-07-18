@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Shuffle,
   Lightbulb,
@@ -11,6 +11,7 @@ import {
   FileCheck,
 } from "lucide-react";
 import { pitchpilotApi } from "../api/pitchpilotApi";
+import { useAuth } from "../context/AuthContext";
 import { useToast } from "../components/Toast";
 import MotionCard from "../components/MotionCard";
 import GradientButton from "../components/GradientButton";
@@ -41,6 +42,8 @@ const PROGRESS_DELAYS: Record<AnalysisStep, number> = {
 
 export default function PracticePage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated } = useAuth();
   const { showToast } = useToast();
 
   const [modes, setModes] = useState<string[]>([]);
@@ -147,6 +150,14 @@ export default function PracticePage() {
   }
 
   async function runFullAnalysis() {
+    if (!isAuthenticated) {
+      const msg = "Please log in to save your practice history.";
+      showToast(msg, "info");
+      navigate("/login", {
+        state: { from: location.pathname + location.search, message: msg },
+      });
+      return;
+    }
     if (!file) {
       setError("Select an MP4 file first.");
       return;
