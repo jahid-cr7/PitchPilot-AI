@@ -7,6 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.2.0] - 2026-07-19
+
+### Authentication Release
+
+### Added
+- **User accounts** — email + password registration and login endpoints (`POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`) with `bcrypt` password hashing (passwords never persisted in plaintext)
+- **JWT auth (HS256)** — signed access tokens issued by the API, verified via a shared `Depends(get_current_user)` dependency; token lifetime configurable via `PITCHPILOT_JWT_EXPIRES_MINUTES` (default 24 h)
+- **User-scoped sessions** — `sessions` table gains a `user_id` FK; every read/write filters by the caller's id so User A cannot see, modify, export, or delete User B's data
+- **Protected endpoints** — `POST /api/v1/analyze/full`, `GET/DELETE /api/v1/sessions[/{id}]`, `GET /api/v1/dashboard/stats`, `GET /api/v1/reports/{session_id}/{html,csv}` now require `Authorization: Bearer <token>`
+- **Public endpoints preserved** — `GET /health`, `GET /`, and all `GET /api/v1/questions/…` routes stay open so the Practice page loads before login
+- **React auth** — `AuthProvider` + `useAuth()` context, `<ProtectedRoute>` guard, `LoginPage`, `RegisterPage`, session-expired banner; JWT persisted in `localStorage` under `pitchpilot_auth_token`; shared API client auto-attaches the header via `setAuthTokenProvider` and logs users out on any 401
+- **Mobile auth** — Expo `AuthContext` mirrors the web behavior with `AsyncStorage` persistence, premium dark Login/Register screens, and a Logout action in Settings; `pitchpilotApi.ts` injects `Authorization` on `apiFetch` and `analyzeFullVideo` and clears storage on 401
+- **Config** — `PITCHPILOT_JWT_SECRET` and `PITCHPILOT_JWT_EXPIRES_MINUTES` in `.env.example` and `.env.production.example`; production API refuses to boot with the default insecure secret
+- **Docs** — new `docs/AUTH_QA_CHECKLIST.md`, expanded auth sections in `README.md` and `docs/DEPLOYMENT_WEB_API.md`
+- **Tests** — `tests/test_auth.py` covers registration, login, `/auth/me`, wrong password, duplicate email, expired/invalid tokens, and cross-user session isolation
+
+### Changed
+- `frontend/src/pages/PracticePage.tsx` — modes/questions now load for guests; **Run Full Analysis** redirects to `/login` with an inline message when the user is unauthenticated instead of blocking the whole page
+- `mobile/src/api/pitchpilotApi.ts` — `analyzeFullVideo` now takes a platform-aware asset (`File` on Expo web, `{ uri, name, type }` on native) and always appends `question`, `role` (defaults to `General`), and `save_session`; backend error `detail` is surfaced in the UI instead of the generic `HTTP 400`
+- `mobile/src/app/practice.tsx` — filters mode ids containing `/` (e.g. `AI/ML Interview`) so a single unmapped mode never blanks the screen; drops the client-side "role required" hard-error since the client now falls back to `General`
+
+### Fixed
+- Practice page no longer shows `Failed to load practice modes.` for unauthenticated visitors (public endpoints stay public)
+- Mobile web `POST /api/v1/analyze/full` no longer returns `400 Bad Request` — the multipart body now carries a real filename on both web (`File` / typed `Blob`) and native (`{ uri, name, type }`)
+
+### Security
+- Passwords hashed with `bcrypt` (cost factor from `passlib` default)
+- JWTs signed with HS256 using `PITCHPILOT_JWT_SECRET`; production start-up hard-fails on the placeholder secret
+- CORS behavior unchanged: `PITCHPILOT_ENV=production` still refuses `*`
+
+---
+
+
+### Mobile Polish Release
+
+### Added
+- **Premium mobile UI redesign** — Dark navy SaaS aesthetic with cyan/blue accents, glass cards, gradient buttons, score ring, and custom bottom tab navigation
+- **Safe-area and scroll fixes** — `paddingBottom: 100` on all screens to clear tab bar; iOS home indicator support (`paddingBottom: 24`, height `84`)
+- **Keyboard avoidance** — Practice screen wraps ScrollView in `KeyboardAvoidingView` so the Target Role input stays visible when typing
+- **Web preview centering** — `_layout.tsx` renders the app in a centered `maxWidth: 480` container on desktop browsers
+- **Report export / share** — Feedback and History screens now use `expo-sharing` + `expo-file-system` for real native share sheets (web triggers browser download)
+- **Settings persistence** — Save Practice History and Speech Analysis toggles are stored in AsyncStorage and survive app restarts
+- **Save Practice History wired to backend** — Mobile sends `save_session` boolean to `POST /api/v1/analyze/full`; backend respects it and skips SQLite save when false
+- **AI Interview coming-soon badge** — Purple "Soon" badge on the AI Interview tab; tapping it shows a friendly Alert instead of pretending to work
+- **Speech Analysis toggle rename** — Formerly "Real-time Audio Analysis" (misleading); now accurately labeled "Speech Analysis" with helper text explaining it analyzes uploaded video audio
+- **Mobile screenshot checklist** — `portfolio/MOBILE_SCREENSHOT_CHECKLIST.md` with 6 required shots, capture instructions, and DevTools viewport recommendations
+- **Mobile screenshot folder docs** — `portfolio/screenshots/mobile/README.md` with expected filenames, sizes, and security reminders
+
+### Changed
+- Updated `README.md` with Mobile App Preview section and placeholder screenshot paths
+- Updated `mobile/README.md` with premium UI overview, settings/export explanations, and known limitations
+
+---
+
+## [v2.0.0] - 2026-07-14
+
+### Added
+- **FastAPI backend** with full REST API exposing all core analyzers
+  - `POST /api/v1/analyze/full` — end-to-end video analysis pipeline
+  - `GET /api/v1/sessions` — list all saved sessions
+  - `GET /api/v1/dashboard/stats` — aggregate dashboard statistics
+  - `GET /api/v1/reports/{id}/html` and `/csv` — report export
+  - Session history CRUD, question bank, AI coach, and final scoring endpoints
+- **React web frontend** — premium dark SaaS UI built with Vite, TypeScript, Tailwind CSS, Recharts, and Framer Motion
+  - Practice page with MP4 dropzone, mode/question selectors, random question button, and simulated progress animation
+  - Feedback page with animated score ring, dimension breakdown, strengths/weak points, transcript preview, and AI model display
+  - Dashboard with KPI cards, score progression chart, skill breakdown, and recent activity table
+  - History with filter tabs, session detail panel, and report export
+  - Settings for backend URL configuration
+- **Expo mobile app** — cross-platform iOS/Android client
+  - Practice screen with video picker, progress simulation, and full analysis result display
+  - Dashboard with pull-to-refresh, KPI grid, skill bars, and recent sessions
+  - History with session list, detail view, report export, and delete
+  - Settings for backend URL and connection test
+- **Save-to-history flow** — `POST /api/v1/analyze/full` automatically saves completed sessions to SQLite and returns `session_id`
+- **Graceful save failure** — if database write fails, analysis still completes with `session_id: null` and `save_warning`
+- **Multi-platform QA checklist** (`docs/MULTIPLATFORM_QA_CHECKLIST.md`) covering Streamlit, React, Mobile, and Backend
+
+### Changed
+- Updated `README.md` with multi-platform architecture diagram and run commands for all four surfaces
+- Updated `mobile/README.md` with detailed backend URL matrix for emulator and physical phone
+- Updated `portfolio/PROJECT_SUMMARY.md` to reflect web app, mobile app, and API backend support
+
+---
+
 ## [v1.0.0] - 2026-07-12
 
 ### Added

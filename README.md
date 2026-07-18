@@ -66,6 +66,48 @@ The UI uses custom CSS injected safely via Streamlit and follows modern SaaS des
 | **Demo Mode** | Loads sample data instantly for presentations and testing |
 | **Role-Based Question Bank** | Curated interview questions across 7 practice modes (Software Dev, AI/ML, Data Analyst, University, Presentation, Sales, Behavioral) with random question picker |
 | **AI Settings** | Configure AI provider, test connections, and manage temporary API keys |
+| **User Accounts & JWT Auth** | Email/password registration, bcrypt-hashed passwords, JWT-based sessions, user-scoped history/dashboard/reports (v1.2.0) |
+
+---
+
+## Authentication & User Accounts
+
+Starting in **v1.2.0**, PitchPilot AI ships with a full authentication layer that scopes every practice session, dashboard chart, and exported report to the logged-in user.
+
+### How it works
+- **Passwords** are hashed with `bcrypt` before they touch the database. Plaintext passwords are never stored, logged, or persisted anywhere.
+- **Tokens** are signed **JWT**s (HS256) issued by the FastAPI backend and verified via a `Depends(get_current_user)` dependency on every protected route.
+- **Sessions are user-scoped:** rows in the `sessions` table carry a `user_id` FK, and every `SELECT` filters by the caller's id — User A can never see User B's history, dashboard trend, or reports.
+- **Token storage:**
+  - React web app → `localStorage` under `pitchpilot_auth_token` / `pitchpilot_auth_user` (managed by `AuthContext`).
+  - Expo mobile app → `AsyncStorage` under the same keys.
+  - Both clients attach `Authorization: Bearer <token>` on every protected request and clear local state on HTTP 401.
+
+### Public vs. protected endpoints
+
+| Endpoint | Auth required |
+|---|---|
+| `GET /health`, `GET /` | ❌ Public |
+| `POST /auth/register`, `POST /auth/login`, `POST /auth/logout` | ❌ Public |
+| `GET /auth/me` | ✅ Requires JWT |
+| `GET /api/v1/questions/modes` | ❌ Public |
+| `GET /api/v1/questions/{mode}` | ❌ Public |
+| `GET /api/v1/questions/{mode}/random` | ❌ Public |
+| `GET /api/v1/questions/{mode}/default-role` | ❌ Public |
+| `POST /api/v1/analyze/full` | ✅ Requires JWT |
+| `GET /api/v1/sessions`, `GET /api/v1/sessions/{id}`, `DELETE /api/v1/sessions/{id}` | ✅ Requires JWT |
+| `GET /api/v1/dashboard/stats` | ✅ Requires JWT |
+| `GET /api/v1/reports/{session_id}/html`, `GET /api/v1/reports/{session_id}/csv` | ✅ Requires JWT |
+
+### Required environment variables
+```bash
+# Generate with:
+#   python -c "import secrets; print(secrets.token_urlsafe(64))"
+PITCHPILOT_JWT_SECRET=replace_me_with_a_long_random_string
+PITCHPILOT_JWT_EXPIRES_MINUTES=1440
+```
+
+If `PITCHPILOT_JWT_SECRET` is left as the default insecure value in `production`, the API refuses to start with a clear error. See [`docs/DEPLOYMENT_WEB_API.md`](docs/DEPLOYMENT_WEB_API.md#authentication-jwt) for the full deployment checklist and [`docs/AUTH_QA_CHECKLIST.md`](docs/AUTH_QA_CHECKLIST.md) for the end-to-end QA script.
 
 ---
 
@@ -96,39 +138,116 @@ Below are screenshots from the v1.0.0 release showing the full practice, coachin
 
 ---
 
+## Mobile App Preview
+
+PitchPilot AI includes a premium dark-themed **Expo mobile app** for iOS and Android. It shares the same FastAPI backend and SQLite database as the web and desktop clients.
+
+### Mobile Screenshots
+
+> Screenshots are captured from the Expo web preview at iPhone 14 Pro viewport (390×844).
+> See [`portfolio/MOBILE_SCREENSHOT_CHECKLIST.md`](portfolio/MOBILE_SCREENSHOT_CHECKLIST.md) for the capture guide.
+
+#### Home
+![Mobile Home](portfolio/screenshots/mobile/01_mobile_home.png)
+*Screenshot pending — capture after backend is connected and hero is visible.*
+
+#### Practice Lab
+![Mobile Practice](portfolio/screenshots/mobile/02_mobile_practice_upload.png)
+*Screenshot pending — capture with file selected and "Run Analysis" enabled.*
+
+#### Feedback Score
+![Mobile Feedback](portfolio/screenshots/mobile/04_mobile_feedback_score.png)
+*Screenshot pending — capture after a successful analysis so real score data appears.*
+
+#### Settings
+![Mobile Settings](portfolio/screenshots/mobile/05_mobile_settings_backend.png)
+*Screenshot pending — capture with backend status showing "Connected".*
+
+### Mobile Features
+
+- **Home** — Premium hero landing with backend status, core module cards, latest session snapshot, and quick stats
+- **Practice Lab** — Segmented control (Solo Practice / AI Interview with "Coming Soon" badge), mode selection, random question picker, video upload with file metadata, and full AI analysis pipeline
+- **Feedback** — Animated score ring, Coach Aria avatar card, dimension scores, strengths, growth areas, improved answer, next milestone, and real export/share via native share sheet
+- **Settings** — Backend URL configuration with platform-specific help, connection test, AI provider cards, and persisted preference toggles (Save Practice History, Speech Analysis)
+- **History & Dashboard** — Accessible from Settings or Feedback; glass-card session list with detail view, progress bars, and report export
+
+### Run the Mobile App
+
+```bash
+cd mobile
+npm install
+npx expo start -c --web     # web preview (fastest)
+npx expo start -c --lan     # native device via Expo Go
+```
+
+See [`mobile/README.md`](mobile/README.md) for detailed backend URL setup, emulator instructions, and troubleshooting.
+
+---
+
+## Multi-Platform Architecture
+
+PitchPilot AI now runs across four surfaces powered by a single shared backend:
+
+| Surface | Purpose | Stack |
+|---------|---------|-------|
+| **Streamlit App** | Desktop demo and quick testing | Python, Streamlit |
+| **FastAPI Backend** | Shared REST API for all clients | Python, FastAPI, SQLite |
+| **React Web Frontend** | Premium dark SaaS web experience | React 18, Vite, Tailwind CSS, Recharts |
+| **Expo Mobile App** | iOS and Android practice on the go | Expo SDK 57, React Native, TypeScript |
+
+All four clients consume the same core analyzers (`core/`) and save sessions to the same SQLite database via the FastAPI backend.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
-| **Frontend / App** | Streamlit, Python 3.12+ |
+| **Desktop Demo** | Streamlit, Python 3.12+ |
+| **Web Frontend** | React 18, Vite, Tailwind CSS, Recharts, Framer Motion |
+| **Mobile App** | Expo SDK 57, React Native 0.86, TypeScript |
+| **Backend API** | FastAPI, Uvicorn, Pydantic |
 | **Video / Camera** | OpenCV (Haar Cascade face detection, optical flow) |
 | **Speech** | faster-whisper (ONNX runtime) |
 | **AI Analysis** | OpenAI-compatible LLM API (GPT-4o-mini by default) |
 | **Data** | SQLite (local session storage) |
-| **Dashboard** | Pandas, Streamlit native charts |
+| **Dashboard** | Pandas, Streamlit native charts / Recharts (React) |
 | **Reports** | HTML / CSV export generators |
-| **Server** | Uvicorn (prepared for FastAPI backend expansion) |
+| **DevOps** | Docker, Docker Compose, GitHub Actions CI |
 
 ---
 
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Streamlit Frontend                      │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
-│  │ Practice │  │ Feedback │  │Dashboard │  │ History  │   │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘   │
-└───────┼─────────────┼─────────────┼─────────────┼──────────┘
-        │             │             │             │
-        └─────────────┴──────┬──────┴─────────────┘
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│   Streamlit     │  │  React Web      │  │  Expo Mobile    │
+│   (Desktop)     │  │  (Browser)      │  │  (iOS/Android)  │
+│                 │  │                 │  │                 │
+│  ┌──────────┐   │  │  ┌──────────┐   │  │  ┌──────────┐   │
+│  │ Practice │   │  │  │ Practice │   │  │  │ Practice │   │
+│  │ Feedback │   │  │  │ Feedback │   │  │  │ Feedback │   │
+│  │ Dashboard│   │  │  │ Dashboard│   │  │  │ Dashboard│   │
+│  │ History  │   │  │  │ History  │   │  │  │ History  │   │
+│  └────┬─────┘   │  │  └────┬─────┘   │  │  └────┬─────┘   │
+└───────┼─────────┘  └───────┼─────────┘  └───────┼─────────┘
+        │                    │                    │
+        └────────────────────┼────────────────────┘
                              │
-              ┌──────────────┼──────────────┐
-              │              │              │
-        ┌─────▼─────┐  ┌────▼────┐  ┌──────▼──────┐
-        │  OpenCV   │  │faster-  │  │ OpenAI API  │
-        │ Video/Cam │  │whisper  │  │  (optional) │
-        └───────────┘  └─────────┘  └─────────────┘
+              ┌──────────────▼──────────────┐
+              │      FastAPI Backend        │
+              │  /api/v1/analyze/full       │
+              │  /api/v1/sessions           │
+              │  /api/v1/dashboard/stats    │
+              │  /api/v1/reports/{id}/html  │
+              └──────────────┬──────────────┘
+                             │
+        ┌────────────────────┼────────────────────┐
+        │                    │                    │
+  ┌─────▼─────┐       ┌─────▼─────┐       ┌──────▼──────┐
+  │  OpenCV   │       │ faster-   │       │ OpenAI API  │
+  │ Video/Cam │       │ whisper   │       │ (optional)  │
+  └───────────┘       └───────────┘       └─────────────┘
                              │
                         ┌────▼────┐
                         │ SQLite  │
@@ -152,75 +271,101 @@ For a detailed breakdown, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
-## Installation
+## Installation & Running
 
-### Ubuntu
+### 1. Backend (Required for React + Mobile)
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/jahid-cr7/PitchPilot-AI.git
-cd PitchPilot-AI
-
-# 2. Create a virtual environment
-python3 -m venv .venv
-
-# 3. Activate it
+cd ~/PitchPilot\ AI
 source .venv/bin/activate
-
-# 4. Install dependencies
 pip install -r requirements.txt
+python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+```
 
-# 5. Run the app
+The API will be available at `http://127.0.0.1:8000`.
+
+> **Note:** Use `--host 0.0.0.0` so physical phones on the same Wi-Fi can reach it.
+
+### 2. Streamlit Desktop App
+
+```bash
+cd ~/PitchPilot\ AI
+source .venv/bin/activate
 streamlit run app.py
 ```
 
-### Windows
+Opens at `http://localhost:8501`.
 
-```powershell
-# 1. Clone the repository
-git clone https://github.com/jahid-cr7/PitchPilot-AI.git
-cd PitchPilot-AI
+### 3. React Web Frontend
 
-# 2. Create a virtual environment
-python -m venv .venv
-
-# 3. Activate it
-.venv\Scripts\activate
-
-# 4. Install dependencies
-pip install -r requirements.txt
-
-# 5. Run the app
-streamlit run app.py
+```bash
+cd frontend
+npm install
+npm run dev
 ```
 
-The app will open automatically at `http://localhost:8501`.
+Opens at `http://localhost:5173`.
+
+### 4. Expo Mobile App
+
+```bash
+cd mobile
+npm install
+npx expo start -c --lan
+```
+
+Scan the QR code with your phone or open in a simulator.
+
+#### Mobile Backend URL Setup
+
+| Platform | Backend URL |
+|----------|-------------|
+| Local browser / iOS simulator | `http://127.0.0.1:8000` |
+| Android emulator | `http://10.0.2.2:8000` |
+| Physical phone (same Wi-Fi) | `http://<YOUR_LAPTOP_IP>:8000` |
+
+> See [mobile/README.md](mobile/README.md) for detailed connection instructions.
+
+---
+
+## Production Deployment (Web + API)
+
+PitchPilot AI ships with a production-ready Docker Compose setup for the FastAPI backend and React frontend.
+
+```bash
+# 1. Copy production environment template
+cp .env.production.example .env
+
+# 2. Edit .env with your real AI key and CORS origins
+nano .env
+
+# 3. Build and start both services
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+| Service | URL |
+|---------|-----|
+| API | `http://localhost:8000` |
+| Web | `http://localhost:3000` |
+
+See [docs/DEPLOYMENT_WEB_API.md](docs/DEPLOYMENT_WEB_API.md) for full details on environment variables, CORS, upload limits, SQLite volumes, and troubleshooting.
 
 ---
 
 ## Deployment
 
-### Local
-
-```bash
-streamlit run app.py
-```
-
-The app opens at `http://localhost:8501`.
-
-### Cloud / Production
+### Streamlit Cloud / Production
 
 - See [DEPLOYMENT.md](DEPLOYMENT.md) for full deployment instructions.
-- Configure secrets using your deployment platform's secrets manager (e.g., Streamlit Cloud Secrets, Railway Variables, Render Environment).
+- Configure secrets using your deployment platform's secrets manager.
 - **Never commit real API keys to Git.**
 
 ### Docker
 
-Docker and Docker Compose are supported. See [docs/DOCKER.md](docs/DOCKER.md) for build, run, and troubleshooting instructions.
+Docker and Docker Compose are supported.
 
-```bash
-docker-compose up --build
-```
+- **Streamlit app:** `docker-compose up --build` (see [docs/DOCKER.md](docs/DOCKER.md))
+- **Web + API production:** `docker compose -f docker-compose.prod.yml up --build -d` (see [docs/DEPLOYMENT_WEB_API.md](docs/DEPLOYMENT_WEB_API.md))
 
 ### CI
 
@@ -261,9 +406,8 @@ export PITCHPILOT_AI_BASE_URL=""            # optional, for custom providers
 
 ```
 PitchPilot AI/
-├── app.py                      # Landing page with overview & Demo Mode
-├── core/
-│   ├── __init__.py
+├── app.py                      # Streamlit landing page with Demo Mode
+├── core/                       # Shared analyzers (used by all clients)
 │   ├── video_analyzer.py       # OpenCV video metadata & motion analysis
 │   ├── camera_analyzer.py      # OpenCV face detection & presence scoring
 │   ├── speech_analyzer.py      # faster-whisper transcription & speech metrics
@@ -272,35 +416,55 @@ PitchPilot AI/
 │   ├── database.py             # SQLite session storage
 │   ├── ui_utils.py             # Shared sidebar & UI components
 │   └── question_bank.py        # Role-based interview question bank
-├── pages/
-│   ├── 1_Practice.py           # Video upload, practice mode & analysis runner
-│   ├── 2_Feedback.py           # Results, AI Coach, final scoring
-│   ├── 3_Dashboard.py          # Progress charts & KPIs
-│   ├── 4_History.py            # Browse, export, delete sessions
-│   └── 5_Settings.py           # AI provider configuration & health check
+├── api/                        # FastAPI backend
+│   ├── main.py                 # FastAPI app with all REST endpoints
+│   ├── config.py               # Production settings from environment variables
+│   ├── services.py             # Service wrappers around core analyzers
+│   ├── schemas.py              # Pydantic request/response models
+│   └── README.md               # API documentation
+├── frontend/                   # React web frontend
+│   ├── src/
+│   │   ├── api/                # Fetch wrapper around FastAPI
+│   │   ├── components/         # Reusable UI components
+│   │   ├── pages/              # Home, Practice, Feedback, Dashboard, History, Settings
+│   │   └── types/              # TypeScript interfaces
+│   ├── Dockerfile              # Production nginx container
+│   ├── nginx.conf              # Static server + SPA fallback
+│   └── README.md
+├── mobile/                     # Expo React Native app
+│   ├── src/
+│   │   ├── api/                # API client
+│   │   ├── app/                # File-based routes (Expo Router)
+│   │   ├── components/         # Shared UI components
+│   │   └── theme/              # Colors, spacing, typography
+│   └── README.md
+├── pages/                      # Streamlit multipage app
+│   ├── 1_Practice.py
+│   ├── 2_Feedback.py
+│   ├── 3_Dashboard.py
+│   ├── 4_History.py
+│   └── 5_Settings.py
 ├── reports/
-│   ├── __init__.py
 │   └── report_generator.py     # HTML & CSV report generators
-├── docs/
-│   ├── ARCHITECTURE.md            # System design & data flow
-│   ├── DEMO_SCRIPT.md             # 3-minute demo script
-│   ├── INTERVIEW_GUIDE.md         # Talking points & Q&A
-│   ├── ROADMAP.md                 # Future improvements
-│   ├── QA_CHECKLIST.md            # Pre-push QA checklist
-│   ├── FINAL_CHECKLIST.md         # Release readiness checklist
-│   ├── CV_PROJECT_DESCRIPTION.md  # Copy-paste CV descriptions
-│   ├── LINKEDIN_POST.md           # Ready-to-post LinkedIn content
-│   ├── SCREENSHOT_GUIDE.md        # Screenshot checklist for portfolio
-│   └── VIDEO_DEMO_SCRIPT.md       # 60s and 3-minute video scripts
-├── portfolio/                  # Portfolio demo package for interviews
+├── docs/                       # Documentation
+│   ├── ARCHITECTURE.md
+│   ├── MULTIPLATFORM_QA_CHECKLIST.md
+│   ├── QA_CHECKLIST.md
+│   ├── DEMO_SCRIPT.md
+│   ├── INTERVIEW_GUIDE.md
+│   ├── ROADMAP.md
+│   └── ...
+├── portfolio/                  # Portfolio demo package
 │   ├── PROJECT_SUMMARY.md
 │   ├── INTERVIEW_PITCH.md
 │   ├── DEMO_FLOW.md
-│   ├── RESUME_BULLETS.md
-│   └── SCREENSHOT_LIST.md
-├── uploads/                    # Uploaded MP4 files (ignored by git)
-├── data/                       # SQLite database (ignored by git)
+│   └── ...
+├── uploads/                    # Uploaded MP4 files (gitignored)
+├── data/                       # SQLite database (gitignored)
 ├── requirements.txt
+├── Dockerfile.api              # FastAPI production container
+├── docker-compose.prod.yml     # Production orchestration (API + Web)
+├── .env.production.example     # Production environment template
 ├── README.md
 ├── CHANGELOG.md
 ├── RELEASE_NOTES.md
@@ -355,13 +519,12 @@ PitchPilot AI is designed as a **practice and self-improvement tool only**.
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for the full roadmap. Highlights:
 
-- Real AI provider integration with prompt versioning
-- Enhanced speech analytics (sentiment, emotion, pause analysis)
+- Enhanced speech analytics (sentiment, emotion, pause analysis, multi-language)
 - Deep-learning body language analysis (MediaPipe, BlazePose)
 - User accounts and authentication
-- FastAPI backend for API access
-- Docker & cloud deployment
+- Real-time practice mode (live webcam + microphone feedback)
 - Team dashboard for coaching organizations
+- Cloud sync and backup beyond local SQLite
 
 ---
 

@@ -1,14 +1,167 @@
-# Release Notes — PitchPilot AI v1.0.0
+# Release Notes — PitchPilot AI v1.2.0
 
-**Release Date:** 2026-07-12
+**Release Date:** 2026-07-19
+**Codename:** Authentication Release
 
 ---
 
 ## Summary
 
-PitchPilot AI v1.0.0 is the first stable release of an AI-powered interview and presentation coaching platform. It analyzes practice videos across four dimensions — body movement, camera presence, speech clarity, and answer content — and delivers structured, actionable feedback with a single overall performance score (0–100).
+PitchPilot AI v1.2.0 introduces a complete authentication layer across the FastAPI backend, the React web app, and the Expo mobile app. Every practice session, dashboard chart, and exported report is now scoped to the logged-in user — you can safely deploy PitchPilot AI to a shared environment without users seeing each other's data.
 
-This release includes the full MVP feature set, production-ready DevOps tooling, a complete portfolio demo package, and comprehensive documentation for public GitHub release and company interview presentations.
+---
+
+## What's New in v1.2.0
+
+### Backend
+- **User accounts** with `email` + `password` — passwords hashed with `bcrypt`, never stored in plaintext
+- **JWT auth (HS256)** signed with `PITCHPILOT_JWT_SECRET`, default 24 h lifetime configurable via `PITCHPILOT_JWT_EXPIRES_MINUTES`
+- **New endpoints:** `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`
+- **User-scoped sessions:** the `sessions` table now carries a `user_id` FK; every session, dashboard stat, and report is filtered by the caller's id
+- **Protected routes:** `POST /api/v1/analyze/full`, `GET/DELETE /api/v1/sessions[/{id}]`, `GET /api/v1/dashboard/stats`, `GET /api/v1/reports/{session_id}/{html,csv}`
+- **Still public:** `GET /health`, `GET /`, and all `GET /api/v1/questions/…` routes so the Practice page loads before login
+- **Prod safety net:** the API refuses to boot when `PITCHPILOT_ENV=production` and `PITCHPILOT_JWT_SECRET` is left at the placeholder value
+
+### React (frontend/)
+- `AuthProvider` + `useAuth()` context with `<ProtectedRoute>` guard
+- `LoginPage` and `RegisterPage` with inline error handling and post-login redirect
+- JWT persisted in `localStorage` under `pitchpilot_auth_token`
+- Shared API client auto-attaches `Authorization: Bearer <token>`; 401 clears state and returns the user to `/login` with a session-expired banner
+- Practice page now loads modes/questions for guests and defers auth-gating to **Run Full Analysis**
+
+### Mobile (mobile/)
+- `AuthProvider` mirrors the web behavior with `AsyncStorage` persistence
+- Premium dark Login and Register screens plus a Logout action in Settings
+- `pitchpilotApi.ts` injects the `Authorization` header on every protected request and clears storage on 401
+- Fixed multipart upload for `POST /api/v1/analyze/full` on Expo web and native (real filename always sent; `fetch` sets its own multipart boundary)
+
+### Docs
+- New [`docs/AUTH_QA_CHECKLIST.md`](docs/AUTH_QA_CHECKLIST.md) — end-to-end auth QA script (register/login/logout, protected 401, cross-user isolation, mobile & web upload)
+- Expanded auth sections in [`README.md`](README.md#authentication--user-accounts) and [`docs/DEPLOYMENT_WEB_API.md`](docs/DEPLOYMENT_WEB_API.md#authentication-jwt)
+
+### Tests
+- `tests/test_auth.py` — 16 tests covering registration, login, `/auth/me`, wrong password, duplicate email, invalid/expired tokens, and cross-user session isolation
+
+---
+
+## Upgrade Notes
+
+1. Add these to your `.env`:
+   ```bash
+   PITCHPILOT_JWT_SECRET=$(python -c "import secrets; print(secrets.token_urlsafe(64))")
+   PITCHPILOT_JWT_EXPIRES_MINUTES=1440
+   ```
+2. Existing SQLite databases from v1.1.x will be migrated on first boot to add the `users` table and the `sessions.user_id` FK. Sessions created before the upgrade have `user_id = NULL` and are visible only to admins via direct SQL. Fresh installs are unaffected.
+3. Rebuild the React frontend after upgrading so the auth pages ship with the bundle:
+   ```bash
+   cd frontend && npm run build
+   ```
+4. If you deploy via Docker Compose, rebuild both images: `docker compose -f docker-compose.prod.yml up --build -d`.
+
+---
+
+## Breaking Changes
+
+- `POST /api/v1/analyze/full` now returns `401` without a valid JWT (previously anonymous). All API consumers must obtain a token from `/auth/login` and send `Authorization: Bearer <token>`.
+- `GET /api/v1/sessions*`, `GET /api/v1/dashboard/stats`, and the report export endpoints likewise now require auth.
+- The Streamlit desktop app remains unchanged; it talks to the analyzer modules directly, not to the HTTP API.
+
+---
+
+
+# Release Notes — PitchPilot AI v1.1.1
+
+**Release Date:** 2026-07-16
+
+---
+
+## Summary
+
+PitchPilot AI v1.1.1 is a **mobile polish release** focused on making the Expo mobile app production-ready for portfolio demos and screenshots. The premium dark UI is now fully implemented, all previously fake/visual-only features are wired or honestly labeled, and report export works via native share sheets.
+
+---
+
+## What's New in v1.1.1
+
+### Premium Mobile UI
+- Dark navy SaaS aesthetic (`#081225` background, cyan `#35d7ff` accents)
+- Glass-morphism cards with borders and shadows
+- Animated score ring using `react-native-svg`
+- Gradient buttons with icon support
+- Custom bottom tab bar with active indicator and icon backgrounds
+
+### Safe Area & Scroll Polish
+- All screens include `paddingBottom: 100` to clear the tab bar
+- iOS home indicator handled (`paddingBottom: 24`, height `84`)
+- Practice screen uses `KeyboardAvoidingView` to prevent keyboard overlap
+- Web preview centers the app in a `maxWidth: 480` container
+
+### Real Export / Share
+- HTML and CSV reports can be shared via the native system share sheet on iOS/Android
+- Web preview triggers automatic browser download
+- Uses `expo-sharing` + `expo-file-system`
+
+### Settings Persistence
+- Save Practice History toggle — stored in AsyncStorage, sent to backend as `save_session`
+- Speech Analysis toggle — stored in AsyncStorage (backend always runs speech analysis currently; toggle is UI-honest)
+- Backend URL — persisted via AsyncStorage as before
+
+### Honest UI (No Fake Behavior)
+- AI Interview tab shows a purple "Soon" badge and Alert on tap — does not pretend to work
+- Speech Analysis toggle is accurately labeled with helper text explaining it analyzes uploaded video audio
+- Export buttons are disabled when no `session_id` exists
+
+### Mobile Screenshot Package
+- `portfolio/MOBILE_SCREENSHOT_CHECKLIST.md` — 6 required shots with capture instructions
+- `portfolio/screenshots/mobile/README.md` — expected filenames, sizes, security reminders, and capture status table
+- Screenshot image files are prepared for capture; see the checklist for step-by-step instructions
+
+---
+
+# Release Notes — PitchPilot AI v2.0.0
+
+**Release Date:** 2026-07-14
+
+---
+
+## Summary
+
+PitchPilot AI v2.0.0 is a major multi-platform release. In addition to the original Streamlit desktop demo, the project now ships with a **FastAPI backend**, a **React web frontend**, and an **Expo mobile app** — all sharing the same core AI analyzers and SQLite session database.
+
+Users can now practice on desktop (Streamlit), browser (React), or phone (Expo), and every completed full analysis is automatically saved to history with exportable HTML/CSV reports.
+
+---
+
+## What's New in v2.0.0
+
+### FastAPI Backend
+- Full REST API exposing video, camera, speech, AI coach, and scoring analyzers
+- `POST /api/v1/analyze/full` runs the complete pipeline and automatically saves the session
+- `GET /api/v1/sessions`, `/dashboard/stats`, and `/reports/{id}/html|csv` for history and export
+- Graceful failure handling — analysis completes even if the database save fails
+- CORS enabled for React and mobile development
+
+### React Web Frontend
+- Premium dark SaaS UI built with Vite, TypeScript, Tailwind CSS, Recharts, and Framer Motion
+- End-to-end practice flow: upload MP4 → run full analysis → view animated feedback → export reports
+- Dashboard with score progression charts, skill breakdown, and recent activity
+- History with filter tabs, session detail, and refresh
+- Responsive layout for desktop and mobile web
+
+### Expo Mobile App
+- Cross-platform iOS/Android client with file-based routing
+- Video upload, progress simulation, and full result display
+- Dashboard and History with pull-to-refresh
+- Settings for backend URL configuration and connection testing
+
+### Multi-Platform Session Sync
+- Any client that calls `POST /api/v1/analyze/full` creates a session in the shared SQLite database
+- Dashboard and History reflect the latest data regardless of which client created it
+- Report exports work from web, mobile, or Streamlit
+
+---
+
+## v1.0.0 Feature Recap
 
 ---
 

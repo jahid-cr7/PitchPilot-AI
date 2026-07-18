@@ -4,12 +4,24 @@ Premium dark-themed Expo React Native app for AI-powered interview and presentat
 
 ## Features
 
+- **Auth** — Register, Login, and Logout screens (email + password); JWT persisted in `AsyncStorage` under `pitchpilot_auth_token`
 - **Home** — Premium hero landing, backend status, core module cards, latest session, quick stats
-- **Practice** — Practice Lab with mode selection, question picker, video upload, full AI analysis
+- **Practice** — Practice Lab with mode selection, question picker, video upload, full AI analysis (login required to Run Analysis)
 - **Feedback** — Score ring, Coach Aria feedback, strengths, growth areas, improved answer, exports
-- **Settings** — Backend URL configuration, AI provider cards, preferences toggles
+- **Settings** — Backend URL configuration, AI provider cards, preferences toggles, real user profile + Logout
 - **History** (accessible from Home/Feedback/Settings) — Browse sessions, view details, export/delete
 - **Dashboard** (accessible from Settings) — KPI grid, skill breakdown, recent sessions
+
+## Authentication
+
+Since **v1.2.0** the mobile app talks to a protected backend:
+
+- Practice modes and questions load anonymously (public endpoints).
+- Everything else — Run Full Analysis, Sessions, Dashboard, Reports — needs a valid JWT.
+- On login/register the token is stored in `AsyncStorage` (`pitchpilot_auth_token`) and mirrored to `pitchpilot_auth_user`.
+- The shared API client (`src/api/pitchpilotApi.ts`) auto-attaches `Authorization: Bearer <token>` via `setAuthTokenProvider`; a 401 clears storage and routes the user back to `/login`.
+- Passwords are never stored on device; only the JWT and the sanitized user profile.
+- Logout tears down the token, calls `POST /auth/logout` fire-and-forget, and returns the user to the guest state.
 
 ## Premium UI Overview
 
