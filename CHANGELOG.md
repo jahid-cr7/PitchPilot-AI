@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `api/schemas.py` — `GoalUpdateRequest.status` pattern corrected to `^(active|completed|abandoned)$`.
 - `api/main.py` — all coaching plan and goals endpoints correctly require `Depends(get_current_user)`.
 
+### Production Cleanup (Task 49)
+- **React code splitting** — `DashboardPage`, `HistoryPage`, `FeedbackPage`, `CoachingPlanPage`, and `SettingsPage` are now loaded via `React.lazy` + `Suspense`. Added `LoadingScreen` component with "Loading PitchPilot AI..." fallback. Main production chunk reduced from ~779 kB to ~363 kB; Vite chunk-size warning eliminated.
+- **FastAPI lifespan migration** — Replaced deprecated `@app.on_event("startup")` with `contextlib.asynccontextmanager` lifespan context manager. Startup behavior (`config.ensure_dirs()` + `init_db()`) is unchanged. pytest deprecation warnings eliminated.
+
 ---
 
 ## [v1.2.0] - 2026-07-19

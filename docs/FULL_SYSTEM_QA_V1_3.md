@@ -94,13 +94,13 @@ cd mobile && npx tsc --noEmit
 
 ## 4. Frontend Checks (React)
 
-### 4.1 Build
+### 4.1 Build (Post-Cleanup)
 ```bash
 cd frontend && npm run build
 ```
-**Result:** ✅ Success (`dist/` generated, 3.11 s)
+**Result:** ✅ Success (`dist/` generated, 3.10 s)
 
-> Chunk-size warning emitted for `index.js` (>500 kB). This is a known bundling observation, not a build failure.
+> Bundle split via `React.lazy` + `Suspense`. Main `index.js` reduced from ~779 kB to ~363 kB. No chunk-size warnings.
 
 ### 4.2 Static Verification Checklist
 
@@ -141,32 +141,39 @@ cd mobile && npx tsc --noEmit
 
 ## 6. Known Limitations
 
-1. **Chunk size** — The React production bundle emits a warning for `index.js` (~779 kB unminified, ~229 kB gzipped). This is acceptable for v1.3.0 but can be improved with dynamic imports in v1.4.0.
-2. **FastAPI lifespan events** — Tests emit `DeprecationWarning` for `@app.on_event("startup")`. This is non-breaking; migration to `lifespan` handlers is scheduled for v1.4.0.
-3. **Speech model download** — First-run speech analysis still requires a ~150 MB faster-whisper model download. No change in this release.
-4. **Camera detector accuracy** — Haar Cascade remains fast but less accurate than deep-learning detectors in poor lighting.
-5. **AI Coach offline default** — Rule-based fallback is used when no `PITCHPILOT_AI_API_KEY` is configured. LLM-powered coaching requires an external API key.
-6. **No cloud sync** — SQLite is local-only; there is no backup or multi-device sync.
-7. **Mobile goals UI** — Goals CRUD is surfaced on the React web app (`/coaching-plan`). The mobile app has read-only coaching plan display via `CoachingPlanCard`; full goal management on mobile is a v1.4.0 candidate.
-8. **No end-to-end browser tests** — React and mobile verification in this report is static/code-review based. Full E2E with Playwright or Detox is planned for v1.4.0.
+1. **Speech model download** — First-run speech analysis still requires a ~150 MB faster-whisper model download. No change in this release.
+2. **Camera detector accuracy** — Haar Cascade remains fast but less accurate than deep-learning detectors in poor lighting.
+3. **AI Coach offline default** — Rule-based fallback is used when no `PITCHPILOT_AI_API_KEY` is configured. LLM-powered coaching requires an external API key.
+4. **No cloud sync** — SQLite is local-only; there is no backup or multi-device sync.
+5. **Mobile goals UI** — Goals CRUD is surfaced on the React web app (`/coaching-plan`). The mobile app has read-only coaching plan display via `CoachingPlanCard`; full goal management on mobile is a v1.4.0 candidate.
+6. **No end-to-end browser tests** — React and mobile verification in this report is static/code-review based. Full E2E with Playwright or Detox is planned for v1.4.0.
 
 ---
 
-## 7. Next Technical Roadmap (v1.4.0+)
+## 7. Production Cleanup (Task 49)
+
+The following cleanup was performed after the initial QA pass:
+
+| Item | Action | Result |
+|------|--------|--------|
+| React bundle size | `React.lazy` + `Suspense` for Dashboard, History, Feedback, CoachingPlan, Settings pages; added `LoadingScreen` fallback | Main chunk reduced from ~779 kB to ~363 kB; chunk warning eliminated |
+| FastAPI startup | Replaced `@app.on_event("startup")` with `contextlib.asynccontextmanager` lifespan | Deprecation warnings eliminated from test output |
+
+---
+
+## 8. Next Technical Roadmap (v1.4.0+)
 
 | Priority | Item | Rationale |
 |----------|------|-----------|
 | High | **End-to-end browser tests** (Playwright) | Close the gap between static analysis and runtime behavior |
 | High | **Mobile goals CRUD** | Parity with web coaching plan page |
-| Medium | **FastAPI lifespan migration** | Eliminate deprecation warnings |
-| Medium | **React bundle splitting** | Reduce initial JS payload |
 | Medium | **Real-time practice mode** | Live webcam + mic feedback without upload |
 | Low | **Deep-learning body language** | MediaPipe/BlazePose for better camera analysis |
 | Low | **Team dashboard** | Aggregated org-wide coaching stats |
 
 ---
 
-## 8. Sign-Off
+## 9. Sign-Off
 
 | Check | Status |
 |-------|--------|

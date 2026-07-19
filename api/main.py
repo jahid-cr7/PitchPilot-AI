@@ -15,6 +15,7 @@ Run locally:
 """
 
 import traceback
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Optional
 
@@ -35,6 +36,17 @@ from core.database import (
 )
 
 # ---------------------------------------------------------------------------
+# Lifespan — startup / shutdown hooks
+# ---------------------------------------------------------------------------
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize database and directories on startup."""
+    config.ensure_dirs()
+    init_db()
+    yield
+
+
+# ---------------------------------------------------------------------------
 # App factory
 # ---------------------------------------------------------------------------
 app = FastAPI(
@@ -43,6 +55,7 @@ app = FastAPI(
     version="1.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # ---------------------------------------------------------------------------
@@ -58,15 +71,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-# ---------------------------------------------------------------------------
-# Startup — ensure database and directories are initialized
-# ---------------------------------------------------------------------------
-@app.on_event("startup")
-async def _startup() -> None:
-    config.ensure_dirs()
-    init_db()
 
 
 # ---------------------------------------------------------------------------
@@ -665,3 +669,103 @@ async def export_csv_report(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to generate CSV report.",
         )
+
+
+# ---------------------------------------------------------------------------
+# Coaching Plan
+# ---------------------------------------------------------------------------
+@app.get(
+    "/api/v1/users/me/coaching-plan",
+    response_model=schemas.CoachingPlanResponse,
+    responses={401: {"model": schemas.ErrorResponse}},
+)
+async def coaching_plan(
+    user: dict = Depends(get_current_user),
+) -> schemas.CoachingPlanResponse:
+    """Return a personalized coaching plan based on the user's practice history."""
+    plan = services.generate_coaching_plan(user_id=int(user["id"]))
+    return schemas.CoachingPlanResponse(status="success", **plan)
+
+
+# ---------------------------------------------------------------------------
+# User Goals
+# ---------------------------------------------------------------------------
+@app.get(
+    "/api/v1/users/me/goals",
+    response_model=schemas.GoalsListResponse,
+    responses={401: {"model": schemas.ErrorResponse}},
+)
+async def list_goals(
+    user: dict = Depends(get_current_user),
+) -> schemas.GoalsListResponse:
+    """List all goals for the authenticated user."""
+    goals = services.get_user_goals_service(user_id=int(user["id"]))
+    return schemas.GoalsListResponse(goals=[schemas.GoalResponse(**g) for g in goals])
+
+
+@app.post(
+    "/api/v1/users/me/goals",
+    response_model=schemas.GoalDetailResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={400: {"model": schemas.ErrorResponse}, 401: {"model": schemas.ErrorResponse}},
+)
+async def create_goal(
+    payload: schemas.GoalCreateRequest,
+    user: dict = Depends(get_current_user),
+) -> schemas.GoalDetailResponse:
+    """Create a new goal for the authenticated user."""
+    goal = services.create_user_goal_service(
+        user_id=int(user["id"]),
+        title=payload.title,
+        target_metric=payload.target_metric,
+        target_value=payload.target_value,
+        current_value=payload.current_value,
+    )
+    return schemas.GoalDetailResponse(goal=schemas.GoalResponse(**goal))
+
+
+@app.patch(
+    "/api/v1/users/me/goals/{goal_id}",
+    response_model=schemas.GoalDetailResponse,
+    responses={401: {"model": schemas.ErrorResponse}, 404: {"model": schemas.ErrorResponse}},
+)
+async def update_goal(
+    goal_id: int,
+    payload: schemas.GoalUpdateRequest,
+    user: dict = Depends(get_current_user),
+) -> schemas.GoalDetailResponse:
+    """Update an existing goal owned by the authenticated user."""
+    kwargs = {k: v for k, v in payload.model_dump().items() if v is not None}
+    goal = services.update_user_goal_service(
+        goal_id=goal_id,
+        user_id=int(user["id"]),
+        **kwargs,
+    )
+    if goal is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Goal not found.",
+        )
+    return schemas.GoalDetailResponse(goal=schemas.GoalResponse(**goal))
+
+
+@app.delete(
+    "/api/v1/users/me/goals/{goal_id}",
+    response_model=schemas.GoalDeleteResponse,
+    responses={401: {"model": schemas.ErrorResponse}, 404: {"model": schemas.ErrorResponse}},
+)
+async def delete_goal(
+    goal_id: int,
+    user: dict = Depends(get_current_user),
+) -> schemas.GoalDeleteResponse:
+    """Delete a goal owned by the authenticated user."""
+    deleted = services.delete_user_goal_service(goal_id=goal_id, user_id=int(user["id"]))
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Goal not found.",
+        )
+    return schemas.GoalDeleteResponse(
+        status="success",
+        message="Goal deleted successfully.",
+    )
