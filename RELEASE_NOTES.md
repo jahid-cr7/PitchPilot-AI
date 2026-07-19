@@ -1,3 +1,63 @@
+# Release Notes — PitchPilot AI v1.3.0
+
+**Release Date:** 2026-07-19
+**Codename:** Coaching & Goals Stabilization
+
+---
+
+## Summary
+
+PitchPilot AI v1.3.0 stabilizes the authentication foundation from v1.2.0 with personalized coaching plans, user goals, and comprehensive full-system QA. Every practice session now feeds into a rule-based coaching engine that recommends focus areas, weekly goals, and action steps. Users can create, track, complete, and delete goals from the React web app, while the mobile app surfaces a read-only coaching plan card with smart deep-linking to practice.
+
+---
+
+## What's New in v1.3.0
+
+### Backend
+- **Personalized coaching plan** — `GET /api/v1/users/me/coaching-plan` analyzes the user's session history to generate: focus area, current level (Beginner → Advanced), weekly goal, recommended practice mode/question, action steps, metrics to watch, and next milestone. Optionally enriches the plan with an AI-generated coaching note when an API key is available.
+- **Goals CRUD** — Full lifecycle management via `GET /api/v1/users/me/goals`, `POST /api/v1/users/me/goals`, `PATCH /api/v1/users/me/goals/{id}`, `DELETE /api/v1/users/me/goals/{id}`. Goals are scoped by `user_id` and support `active`, `completed`, and `abandoned` statuses.
+- **Cross-user isolation hardened** — New tests verify that User A cannot read, update, delete, or export User B's goals, sessions, or reports. All endpoints return `404` (not `403`) for cross-user access to avoid leaking existence.
+- **Test coverage expanded** — 39 backend tests (up from 23) covering auth, analytics, coaching plan, goals, and isolation.
+
+### React (frontend/)
+- **New `/coaching-plan` page** — Premium dark UI with animated cards, inline goal creation, progress bars, complete/delete actions, and active/completed filtering. Protected by `<ProtectedRoute>`.
+- **Sidebar navigation** — "Coaching Plan" link added to the sidebar with `authOnly: true`.
+- **Dashboard integration** — Quick link from Dashboard to Coaching Plan.
+
+### Mobile (mobile/)
+- **CoachingPlanCard component** — Glass-morphism card displayed on Home and Settings. Four states: logged-out prompt, loading spinner, friendly error, and full coaching plan with "Start Recommended Practice" deep-link.
+- **TypeScript clean** — `npx tsc --noEmit` passes with zero errors.
+
+### Docs
+- **Full-system QA report** — `docs/FULL_SYSTEM_QA_V1_3.md` documents every command, endpoint, test result, known limitation, and the v1.4.0 technical roadmap.
+
+---
+
+## Upgrade Notes
+
+1. Existing SQLite databases from v1.2.x will be migrated on first boot to add the `user_goals` table (migration-safe via `init_db`).
+2. Rebuild the React frontend after upgrading:
+   ```bash
+   cd frontend && npm run build
+   ```
+3. If you deploy via Docker Compose, rebuild both images:
+   ```bash
+   docker compose -f docker-compose.prod.yml up --build -d
+   ```
+
+---
+
+## Known Limitations
+
+- React production bundle chunk-size warning (~779 kB unminified). Non-breaking; optimization scheduled for v1.4.0.
+- FastAPI `@app.on_event("startup")` deprecation warnings. Non-breaking; lifespan migration scheduled for v1.4.0.
+- Mobile goals management is read-only (view coaching plan). Full CRUD on mobile is planned for v1.4.0.
+- Speech analysis still requires a local faster-whisper model download on first run (~150 MB).
+- Camera analysis uses Haar Cascade (fast but less accurate than deep-learning detectors).
+- No cloud sync or multi-device backup; SQLite remains local-only.
+
+---
+
 # Release Notes — PitchPilot AI v1.2.0
 
 **Release Date:** 2026-07-19

@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.3.0] - 2026-07-19
+
+### Coaching & Goals Stabilization
+
+### Added
+- **Personalized coaching plan** — `GET /api/v1/users/me/coaching-plan` returns a rule-based coaching plan derived from the user's practice history (focus area, current level, weekly goal, recommended practice mode/question, action steps, metrics to watch, next milestone). Optional AI-powered coaching note when `PITCHPILOT_AI_API_KEY` is configured.
+- **Goals CRUD** — `GET /api/v1/users/me/goals`, `POST /api/v1/users/me/goals`, `PATCH /api/v1/users/me/goals/{id}`, `DELETE /api/v1/users/me/goals/{id}` with full user isolation. Goals track title, target metric, target value, current value, status (`active` | `completed` | `abandoned`), and `completed_at` timestamp.
+- **React `/coaching-plan` page** — Protected route with animated cards for focus area, weekly goal, action steps, next milestone, recommended practice, and AI coaching note. Includes inline goal creation form, progress bars, complete/delete actions, and active/completed goal filtering.
+- **Mobile `CoachingPlanCard`** — Reusable glass-morphism card on Home and Settings screens. Handles logged-out (login prompt), loading, error, and success states. Deep-links to Practice with the recommended mode and question.
+- **Backend tests** — `tests/test_coaching_plan_and_goals.py` adds 17 tests covering coaching plan auth, beginner state, weakness reflection, goals CRUD, update/delete 404s, and cross-user isolation for goals, sessions, and reports.
+- **Full-system QA doc** — `docs/FULL_SYSTEM_QA_V1_3.md` with automated command checklist, endpoint coverage matrix, user isolation scenarios, React/mobile static verification, known limitations, and v1.4.0 roadmap.
+
+### Changed
+- `frontend/src/pages/DashboardPage.tsx` — adds sidebar link to `/coaching-plan`.
+- `frontend/src/components/Sidebar.tsx` — adds "Coaching Plan" nav item with `authOnly: true`.
+- `mobile/src/app/index.tsx` — renders `<CoachingPlanCard />` on the Home screen.
+- `mobile/src/app/settings.tsx` — renders `<CoachingPlanCard compact />` in the account area.
+
+### Fixed
+- `api/schemas.py` — `GoalUpdateRequest.status` pattern corrected to `^(active|completed|abandoned)$`.
+- `api/main.py` — all coaching plan and goals endpoints correctly require `Depends(get_current_user)`.
+
+---
+
 ## [v1.2.0] - 2026-07-19
 
 ### Authentication Release

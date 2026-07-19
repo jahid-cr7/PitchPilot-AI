@@ -67,6 +67,8 @@ The UI uses custom CSS injected safely via Streamlit and follows modern SaaS des
 | **Role-Based Question Bank** | Curated interview questions across 7 practice modes (Software Dev, AI/ML, Data Analyst, University, Presentation, Sales, Behavioral) with random question picker |
 | **AI Settings** | Configure AI provider, test connections, and manage temporary API keys |
 | **User Accounts & JWT Auth** | Email/password registration, bcrypt-hashed passwords, JWT-based sessions, user-scoped history/dashboard/reports (v1.2.0) |
+| **Personalized Coaching Plan** | Rule-based coaching plan derived from practice history with focus area, weekly goal, action steps, and recommended practice (v1.3.0) |
+| **Goals** | Create, track, complete, and delete personal improvement goals tied to metrics (v1.3.0) |
 
 ---
 
@@ -510,8 +512,9 @@ PitchPilot AI is designed as a **practice and self-improvement tool only**.
 - Speech analysis requires a local faster-whisper model download on first run (~150 MB).
 - Camera analysis uses Haar Cascade (fast but less accurate than deep-learning detectors).
 - AI Coach requires an external API key for LLM-powered analysis; otherwise uses rule-based fallback.
-- No user authentication or multi-user support in the MVP.
 - Video analysis is limited to MP4 format.
+- SQLite is local-only; there is no cloud sync or multi-device backup.
+- Mobile goals management is read-only (coaching plan card). Full goal CRUD on mobile is planned.
 
 ---
 
@@ -521,10 +524,10 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for the full roadmap. Highlights:
 
 - Enhanced speech analytics (sentiment, emotion, pause analysis, multi-language)
 - Deep-learning body language analysis (MediaPipe, BlazePose)
-- User accounts and authentication
 - Real-time practice mode (live webcam + microphone feedback)
 - Team dashboard for coaching organizations
 - Cloud sync and backup beyond local SQLite
+- End-to-end browser and mobile automation tests
 
 ---
 
