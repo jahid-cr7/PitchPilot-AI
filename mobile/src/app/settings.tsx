@@ -16,6 +16,7 @@ import {
 import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import StatusBadge from '../components/StatusBadge';
+import CoachingPlanCard from '../components/CoachingPlanCard';
 import { useAuth } from '../context/AuthContext';
 
 const DEFAULT_URL = 'http://127.0.0.1:8000';
@@ -157,6 +158,14 @@ export default function SettingsScreen() {
               icon={<Ionicons name="person-add-outline" size={18} color="#fff" />}
             />
           </View>
+        )}
+
+        {/* Coaching summary (logged-in only) */}
+        {isAuthenticated && (
+          <>
+            <Text style={styles.sectionLabel}>Coaching</Text>
+            <CoachingPlanCard compact />
+          </>
         )}
 
         {/* Backend Engine Status */}

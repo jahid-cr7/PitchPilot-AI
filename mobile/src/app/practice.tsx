@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
@@ -51,6 +51,7 @@ function formatBytes(bytes: number): string {
 
 export default function PracticeScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ mode?: string; question?: string }>();
   const { isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<typeof PRACTICE_TABS[number]>('Solo Practice');
   const [modes, setModes] = useState<string[]>([]);
@@ -96,6 +97,16 @@ export default function PracticeScreen() {
     };
   }, []);
 
+  // Prefill the question when arriving from the coaching plan's
+  // "Start Recommended Practice" button. Mode selection stays manual since
+  // the recommended mode label may not match a backend-provided mode id.
+  useEffect(() => {
+    const q = typeof params.question === 'string' ? params.question.trim() : '';
+    if (q) {
+      setQuestionInput(q);
+    }
+  }, [params.question]);
+
   const handleSelectMode = useCallback(async (mode: string) => {
     setSelectedMode(mode);
     setLoadingQuestions(true);
@@ -116,8 +127,7 @@ export default function PracticeScreen() {
     }
   }, []);
 
-  const handleRandomQuestion = useCallback(async () => {
-    if (!selectedMode) return;
+  const handleRandomQuestion = useCallback(async () => {    if (!selectedMode) return;
     setLoadingQuestions(true);
     try {
       const res = await getRandomQuestion(selectedMode);

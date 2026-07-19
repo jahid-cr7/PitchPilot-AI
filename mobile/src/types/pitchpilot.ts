@@ -145,3 +145,28 @@ export interface AuthTokenResponse {
 export interface MeResponse {
   user: AuthUser;
 }
+
+// ---------------------------------------------------------------------------
+// Coaching Plan
+// ---------------------------------------------------------------------------
+export interface CoachingPlan {
+  focus_area: string;
+  current_level: string;
+  weekly_goal: string;
+  recommended_practice_mode: string;
+  recommended_question: string;
+  action_steps: string[];
+  metrics_to_watch: string[];
+  next_milestone: string;
+  ai_note?: string | null;
+}
+
+/**
+ * The backend returns the coaching plan fields at the top level alongside
+ * `status` (see CoachingPlanResponse in api/schemas.py). Some callers may also
+ * receive a nested `plan` object, so both shapes are accepted.
+ */
+export interface CoachingPlanResponse extends Partial<CoachingPlan> {
+  status: string;
+  plan?: CoachingPlan;
+}

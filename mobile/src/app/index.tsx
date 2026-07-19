@@ -11,6 +11,7 @@ import GlassCard from '../components/GlassCard';
 import GradientButton from '../components/GradientButton';
 import StatusBadge from '../components/StatusBadge';
 import LoadingOverlay from '../components/LoadingOverlay';
+import CoachingPlanCard from '../components/CoachingPlanCard';
 
 function formatDate(iso: string): string {
   try {
@@ -160,6 +161,10 @@ export default function HomeScreen() {
             </View>
           </GlassCard>
         )}
+
+        {/* Coaching Plan */}
+        <Text style={styles.sectionTitle}>Your Coaching Focus</Text>
+        <CoachingPlanCard />
 
         {/* Quick Stats */}
         {stats && stats.total_sessions > 0 && (

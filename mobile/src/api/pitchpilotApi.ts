@@ -19,6 +19,8 @@ import {
   DashboardStats,
   ReportExportResponse,
   FullAnalysisResponse,
+  CoachingPlan,
+  CoachingPlanResponse,
 } from '../types/pitchpilot';
 
 export class PitchPilotApiError extends Error {
@@ -394,4 +396,31 @@ export async function exportHtmlReport(sessionId: number): Promise<ReportExportR
 
 export async function exportCsvReport(sessionId: number): Promise<ReportExportResponse> {
   return apiFetch<ReportExportResponse>(`/api/v1/reports/${sessionId}/csv`);
+}
+
+// ---------------------------------------------------------------------------
+// Coaching Plan
+// ---------------------------------------------------------------------------
+/**
+ * Fetch the authenticated user's personalized coaching plan.
+ *
+ * Requires a valid JWT (injected via getAuthHeader). A 401 is handled by the
+ * shared apiFetch/unauthorized handler which clears the session. The backend
+ * returns the plan fields at the top level, but a nested `plan` object is also
+ * tolerated; both are normalized to a flat CoachingPlan.
+ */
+export async function getCoachingPlan(): Promise<CoachingPlan> {
+  const res = await apiFetch<CoachingPlanResponse>('/api/v1/users/me/coaching-plan');
+  const source: Partial<CoachingPlan> = res.plan ?? res;
+  return {
+    focus_area: source.focus_area ?? '',
+    current_level: source.current_level ?? '',
+    weekly_goal: source.weekly_goal ?? '',
+    recommended_practice_mode: source.recommended_practice_mode ?? '',
+    recommended_question: source.recommended_question ?? '',
+    action_steps: source.action_steps ?? [],
+    metrics_to_watch: source.metrics_to_watch ?? [],
+    next_milestone: source.next_milestone ?? '',
+    ai_note: source.ai_note ?? null,
+  };
 }
