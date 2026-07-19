@@ -33,6 +33,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **React code splitting** — `DashboardPage`, `HistoryPage`, `FeedbackPage`, `CoachingPlanPage`, and `SettingsPage` are now loaded via `React.lazy` + `Suspense`. Added `LoadingScreen` component with "Loading PitchPilot AI..." fallback. Main production chunk reduced from ~779 kB to ~363 kB; Vite chunk-size warning eliminated.
 - **FastAPI lifespan migration** — Replaced deprecated `@app.on_event("startup")` with `contextlib.asynccontextmanager` lifespan context manager. Startup behavior (`config.ensure_dirs()` + `init_db()`) is unchanged. pytest deprecation warnings eliminated.
 
+### Docker & Cloud Deployment (Task 50–51)
+- **Docker deployment verified** — `docker-compose.prod.yml` validated, API and web images built and tested. Endpoints confirmed working: `/health`, `/api/v1/auth/register`, `/api/v1/auth/login`, `/api/v1/dashboard/stats`, `/api/v1/users/me/coaching-plan`, `/api/v1/users/me/goals`, `/api/v1/users/me/analytics`, `/api/v1/users/me/profile`.
+- **`.dockerignore` updated** — Excludes frontend/mobile node_modules, dist, .expo, uploads, media, databases, and cache directories.
+- **`docs/DEPLOYMENT_WEB_API.md` updated** — Added v1.3.0 protected endpoints, Docker verification commands, first-build-slow troubleshooting.
+- **Cloud deployment planning documentation added** — New `docs/CLOUD_DEPLOYMENT_PLAN.md` covers VPS + Docker Compose (recommended), Render, Railway, Fly.io, and AWS/GCP/Azure high-level options. Includes architecture diagram, environment variables, Ubuntu deployment commands, HTTPS setup (Caddy/nginx/Cloudflare), backup strategy, and production safety checklist.
+
+### VPS Production Package (Task 52)
+- **`docker-compose.vps.yml`** — New production compose file with integrated Caddy reverse proxy (automatic HTTPS), API container (internal 8000), and web container (internal 80). Only ports 80/443 are exposed publicly.
+- **`deployment/Caddyfile`** — Ready-to-use Caddy config with placeholder domains, reverse proxy routes, security headers, compression, and request body size limits.
+- **Backup scripts** — `scripts/backup_sqlite.sh` (container-safe SQLite backup with auto-cleanup), `scripts/backup_uploads.sh` (volume tar.gz backup), `scripts/restore_sqlite.sh` (interactive restore with confirmation).
+- **`scripts/deploy_vps.sh`** — One-command deployment helper that pulls git changes, validates compose, builds/starts containers, waits for health, and shows status.
+- **`.env.production.example`** — Added `PUBLIC_WEB_DOMAIN` and `PUBLIC_API_DOMAIN` for deployment script integration.
+
 ---
 
 ## [v1.2.0] - 2026-07-19

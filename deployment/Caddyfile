@@ -1,0 +1,65 @@
+# PitchPilot AI — Caddy Reverse Proxy Configuration
+#
+# 1. Replace placeholder domains below with your real domains.
+# 2. Ensure DNS A records point to this server.
+# 3. Caddy will automatically obtain and renew Let's Encrypt certificates.
+#
+# Placeholders to replace:
+#   yourdomain.com     -> your public web frontend domain
+#   api.yourdomain.com -> your public API domain
+
+yourdomain.com {
+	# Frontend — React static app served by nginx
+	reverse_proxy web:80
+
+	# Security headers
+	header {
+		# Prevent clickjacking
+		X-Frame-Options "SAMEORIGIN"
+		# XSS protection
+		X-Content-Type-Options "nosniff"
+		# Referrer policy
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	# Enable compression
+	encode gzip
+
+	# Log requests
+	log {
+		output file /data/caddy/access-web.log
+	}
+}
+
+api.yourdomain.com {
+	# Backend — FastAPI application
+	reverse_proxy api:8000 {
+		# Increase timeouts for video upload + analysis
+		transport http {
+			read_timeout 300s
+			write_timeout 300s
+		}
+	}
+
+	# Allow large uploads (must match PITCHPILOT_MAX_UPLOAD_MB)
+	request_body {
+		max_size 200MB
+	}
+
+	# Security headers
+	header {
+		Access-Control-Allow-Origin "https://yourdomain.com"
+		Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+		Access-Control-Allow-Headers "Authorization, Content-Type"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+	}
+
+	# Enable compression
+	encode gzip
+
+	# Log requests
+	log {
+		output file /data/caddy/access-api.log
+	}
+}

@@ -362,6 +362,36 @@ curl -I http://localhost:3000
 
 See [docs/DEPLOYMENT_WEB_API.md](docs/DEPLOYMENT_WEB_API.md) for full details on environment variables, CORS, upload limits, SQLite volumes, auth setup, and troubleshooting.
 
+### VPS Deployment with Caddy HTTPS (Recommended)
+
+For a public-facing VPS with automatic HTTPS:
+
+```bash
+# 1. Configure domains in deployment/Caddyfile
+#    Replace yourdomain.com and api.yourdomain.com
+
+# 2. Configure environment
+cp .env.production.example .env
+nano .env
+
+# 3. Deploy with one command
+./scripts/deploy_vps.sh
+```
+
+| Service | URL |
+|---------|-----|
+| Web | `https://yourdomain.com` |
+| API | `https://api.yourdomain.com` |
+| API Docs | `https://api.yourdomain.com/docs` |
+
+Features:
+- **Caddy reverse proxy** with automatic Let's Encrypt HTTPS
+- **No exposed internal ports** — only 80 and 443 are public
+- **Backup scripts** included: `./scripts/backup_sqlite.sh`, `./scripts/backup_uploads.sh`
+- **One-command deploy**: `./scripts/deploy_vps.sh`
+
+See [docs/CLOUD_DEPLOYMENT_PLAN.md](docs/CLOUD_DEPLOYMENT_PLAN.md) for the full VPS setup guide.
+
 ---
 
 ## Deployment
@@ -378,6 +408,12 @@ Docker and Docker Compose are supported.
 
 - **Streamlit app:** `docker-compose up --build` (see [docs/DOCKER.md](docs/DOCKER.md))
 - **Web + API production:** `docker compose -f docker-compose.prod.yml up --build -d` (see [docs/DEPLOYMENT_WEB_API.md](docs/DEPLOYMENT_WEB_API.md))
+
+### Cloud Deployment
+
+For deploying to a VPS, Render, Railway, Fly.io, or AWS/GCP/Azure:
+
+- See [docs/CLOUD_DEPLOYMENT_PLAN.md](docs/CLOUD_DEPLOYMENT_PLAN.md) for a full cloud deployment guide with architecture diagrams, environment variables, HTTPS setup, backup strategy, and production safety checklist.
 
 ### CI
 

@@ -1,0 +1,95 @@
+# PitchPilot AI — VPS Production Docker Compose
+# Runs Caddy (HTTPS reverse proxy) + FastAPI backend + React frontend
+# with persistent SQLite, uploads, and Caddy TLS state.
+#
+# Prerequisites:
+#   1. Point DNS A records to this server:
+#      - yourdomain.com → server-ip
+#      - api.yourdomain.com → server-ip
+#   2. cp .env.production.example .env
+#   3. Edit .env with real values (JWT secret, AI key, domains)
+#   4. Edit deployment/Caddyfile and replace placeholder domains
+#
+# Usage:
+#   docker compose -f docker-compose.vps.yml up --build -d
+#   docker compose -f docker-compose.vps.yml logs -f caddy
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: pitchpilot-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deployment/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - web
+      - api
+    networks:
+      - pitchpilot-net
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: pitchpilot-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PITCHPILOT_ENV=production
+      - PITCHPILOT_DB_PATH=/app/data/pitchpilot.db
+      - PITCHPILOT_UPLOAD_DIR=/app/uploads
+    volumes:
+      - pitchpilot-data:/app/data
+      - pitchpilot-uploads:/app/uploads
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - pitchpilot-net
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${PUBLIC_API_DOMAIN:-https://api.yourdomain.com}
+    container_name: pitchpilot-web
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - pitchpilot-net
+
+volumes:
+  pitchpilot-data:
+    driver: local
+  pitchpilot-uploads:
+    driver: local
+  caddy-data:
+    driver: local
+  caddy-config:
+    driver: local
+
+networks:
+  pitchpilot-net:
+    driver: bridge
