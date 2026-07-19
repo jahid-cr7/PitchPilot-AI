@@ -46,6 +46,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`scripts/deploy_vps.sh`** — One-command deployment helper that pulls git changes, validates compose, builds/starts containers, waits for health, and shows status.
 - **`.env.production.example`** — Added `PUBLIC_WEB_DOMAIN` and `PUBLIC_API_DOMAIN` for deployment script integration.
 
+### Security Hardening (Task 53)
+- **API rate limiting** — New `api/rate_limiter.py` with lightweight in-memory per-IP rate limiting. Limits: `POST /auth/register` and `POST /auth/login` = 10 req/min; `POST /api/v1/analyze/full` = 5 req/hour. Returns HTTP 429 when exceeded.
+- **JWT secret production safety** — API refuses to start in production if `PITCHPILOT_JWT_SECRET` is missing, blank, or set to a known placeholder (`dev-insecure-secret-change-me`, `replace_me`, etc.). Runtime check runs inside the lifespan startup hook.
+- **CORS production safety** — Startup warning emitted when `PITCHPILOT_CORS_ORIGINS` is still at localhost defaults in production. Wildcard (`*`) is already stripped automatically.
+- **Upload security verified** — Allowed extensions `.mp4`/`.mov` only, max size from `PITCHPILOT_MAX_UPLOAD_MB`, UUID-based safe filenames, temp files cleaned up in `try/except/finally`, no file paths exposed in responses.
+- **Caddy security headers enhanced** — Added `Strict-Transport-Security` (HSTS) and `Permissions-Policy` to both frontend and API blocks in `deployment/Caddyfile`.
+- **`.env.production.example` updated** — Added stronger warnings for JWT secret, CORS domains, and upload limit alignment with Caddy.
+- **Security tests** — New `tests/test_security_hardening.py` with 12 tests covering unsafe JWT rejection, blank JWT rejection, CORS wildcard stripping, non-video upload rejection, empty upload rejection, auth requirements across 6 endpoints, and rate limiting on register/login.
+- **`tests/conftest.py`** — Added autouse fixture to clear rate limiter buckets between tests, preventing cross-test interference.
+- **Security documentation** — New `docs/SECURITY_HARDENING.md` with JWT rules, CORS setup, upload restrictions, rate limits, HTTPS headers, `.env` safety, deployment checklist, and incident response steps.
+
+### VPS Launch Runbook (Task 54)
+- **`docs/VPS_LAUNCH_RUNBOOK.md`** — Complete launch checklist covering: pre-launch requirements (VPS, domain, DNS, Docker, `.env`, secrets, Caddy, firewall), DNS propagation verification, UFW firewall commands, deployment commands (git pull, compose validation, `deploy_vps.sh`), health checks (API, frontend, register/login, dashboard, upload, coaching plan, goals), automated backup cron setup, rollback procedures (code revert + DB restore), weekly monitoring checklist (container status, disk usage, backups, restarts), and a common launch errors reference table with causes and fixes.
+
 ---
 
 ## [v1.2.0] - 2026-07-19

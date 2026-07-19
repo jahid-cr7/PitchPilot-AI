@@ -392,6 +392,8 @@ Features:
 
 See [docs/CLOUD_DEPLOYMENT_PLAN.md](docs/CLOUD_DEPLOYMENT_PLAN.md) for the full VPS setup guide.
 
+**Ready to launch?** Follow the step-by-step [docs/VPS_LAUNCH_RUNBOOK.md](docs/VPS_LAUNCH_RUNBOOK.md) for DNS, firewall, deployment, health checks, backup setup, and rollback procedures.
+
 ---
 
 ## Deployment
