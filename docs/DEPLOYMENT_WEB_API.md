@@ -143,8 +143,15 @@ Starting in **v1.2.0**, the backend requires JWT auth for all analysis, session,
 - `GET /api/v1/dashboard/stats`
 - `GET /api/v1/reports/{session_id}/html`
 - `GET /api/v1/reports/{session_id}/csv`
+- `GET /api/v1/users/me/analytics`
+- `GET /api/v1/users/me/profile`
+- `GET /api/v1/users/me/coaching-plan`
+- `GET /api/v1/users/me/goals`
+- `POST /api/v1/users/me/goals`
+- `PATCH /api/v1/users/me/goals/{goal_id}`
+- `DELETE /api/v1/users/me/goals/{goal_id}`
 
-Every row these endpoints read/write is scoped to `user_id = current_user.id`. Users cannot query, modify, or export another user's sessions.
+Every row these endpoints read/write is scoped to `user_id = current_user.id`. Users cannot query, modify, or export another user's sessions, goals, or reports.
 
 ### Public endpoints (no token needed)
 
@@ -239,11 +246,79 @@ volumes:
 - `VITE_API_BASE_URL` must be the **browser-facing** URL, not the internal Docker network URL.
 - Example: if you expose the API on `https://api.mydomain.com`, set `VITE_API_BASE_URL=https://api.mydomain.com` before building.
 
+### First build is very slow
+
+- The API image downloads heavy Python wheels: `opencv-python-headless` (~60 MB), `onnxruntime` (~19 MB), `numpy`, `pandas`, `pyarrow`, etc.
+- The `apt-get install ffmpeg` step also installs many system libraries.
+- **This is normal.** Subsequent builds use Docker layer cache and complete in seconds.
+- If the build times out, run it again — pip will resume interrupted downloads.
+
 ### Health check fails
 
 - The API container has a `HEALTHCHECK` that polls `/health`.
 - If it keeps failing, check logs: `docker logs pitchpilot-api`
 - Common cause: faster-whisper model downloading on first startup (can take a minute).
+
+---
+
+## Docker Verification
+
+Before deploying, validate the compose file:
+
+```bash
+# Validate configuration (does not start containers)
+docker compose -f docker-compose.prod.yml config
+```
+
+Expected output: the rendered YAML with no errors.
+
+### Build and start
+
+```bash
+# Create environment file
+cp .env.production.example .env
+# Edit .env with real values, then:
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+### Quick health checks
+
+```bash
+# API health
+curl http://localhost:8000/health
+
+# Frontend loads
+curl -I http://localhost:3000
+
+# API docs
+curl http://localhost:8000/docs
+```
+
+### First-run smoke test
+
+```bash
+# 1. Register a test account
+curl -X POST http://localhost:8000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test","email":"test@example.com","password":"password123"}'
+
+# 2. Log in
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}'
+
+# 3. Check dashboard stats (replace <token> with the access_token from step 2)
+curl http://localhost:8000/api/v1/dashboard/stats \
+  -H "Authorization: Bearer <token>"
+
+# 4. Check coaching plan
+curl http://localhost:8000/api/v1/users/me/coaching-plan \
+  -H "Authorization: Bearer <token>"
+
+# 5. List goals
+curl http://localhost:8000/api/v1/users/me/goals \
+  -H "Authorization: Bearer <token>"
+```
 
 ---
 
@@ -255,6 +330,7 @@ volumes:
 | `frontend/Dockerfile` | React frontend container (multi-stage build) |
 | `frontend/nginx.conf` | Nginx static server config for SPA routing |
 | `docker-compose.prod.yml` | Production orchestration (API + Web + volumes) |
+| `.dockerignore` | Excludes dev artifacts from Docker build context |
 | `.env.production.example` | Production environment template |
 | `frontend/.env.example` | Frontend dev environment template |
 | `frontend/.env.production.example` | Frontend build environment template |

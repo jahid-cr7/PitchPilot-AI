@@ -338,19 +338,29 @@ PitchPilot AI ships with a production-ready Docker Compose setup for the FastAPI
 # 1. Copy production environment template
 cp .env.production.example .env
 
-# 2. Edit .env with your real AI key and CORS origins
+# 2. Edit .env with your real values (AI key, JWT secret, CORS origins)
 nano .env
 
-# 3. Build and start both services
+# 3. Validate compose configuration
+docker compose -f docker-compose.prod.yml config
+
+# 4. Build and start both services
 docker compose -f docker-compose.prod.yml up --build -d
+
+# 5. Quick smoke test
+curl http://localhost:8000/health
+curl -I http://localhost:3000
 ```
 
 | Service | URL |
 |---------|-----|
 | API | `http://localhost:8000` |
 | Web | `http://localhost:3000` |
+| API Docs | `http://localhost:8000/docs` |
 
-See [docs/DEPLOYMENT_WEB_API.md](docs/DEPLOYMENT_WEB_API.md) for full details on environment variables, CORS, upload limits, SQLite volumes, and troubleshooting.
+> **First build is slow** — the API image downloads heavy ML dependencies (OpenCV, ONNX Runtime, faster-whisper, etc.). Subsequent builds use Docker layer cache and are much faster.
+
+See [docs/DEPLOYMENT_WEB_API.md](docs/DEPLOYMENT_WEB_API.md) for full details on environment variables, CORS, upload limits, SQLite volumes, auth setup, and troubleshooting.
 
 ---
 

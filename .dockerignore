@@ -1,3 +1,4 @@
+# Python virtual environments
 .venv
 .venv/
 .venv/**
@@ -11,6 +12,21 @@ env
 env/
 env/**
 
+# Frontend & mobile build artifacts / dependencies
+frontend/node_modules
+frontend/node_modules/**
+frontend/dist
+frontend/dist/**
+mobile/node_modules
+mobile/node_modules/**
+mobile/.expo
+mobile/.expo/**
+mobile/dist
+mobile/dist/**
+node_modules
+node_modules/**
+
+# Uploads & media
 uploads
 uploads/
 uploads/**
@@ -35,6 +51,7 @@ media/**
 *.m4a
 *.M4A
 
+# Python cache
 __pycache__
 __pycache__/**
 **/__pycache__/**
@@ -42,8 +59,11 @@ __pycache__/**
 *.pyo
 *.pyd
 
+# Git & CI
 .git
 .git/**
+.github
+.github/**
 .pytest_cache
 .pytest_cache/**
 .mypy_cache
@@ -54,15 +74,21 @@ __pycache__/**
 .cache/**
 **/.cache/**
 
+# Secrets & logs
 .env
+.env.*
+!.env.production.example
+!.env.example
 .streamlit/secrets.toml
 *.log
 
+# Databases
 data/*.db
 *.db
 *.sqlite
 *.sqlite3
 
+# ML models & downloads
 models
 models/**
 checkpoints
@@ -70,6 +96,7 @@ checkpoints/**
 downloads
 downloads/**
 
+# Generic build artifacts
 dist
 dist/**
 build

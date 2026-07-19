@@ -159,9 +159,39 @@ The following cleanup was performed after the initial QA pass:
 | React bundle size | `React.lazy` + `Suspense` for Dashboard, History, Feedback, CoachingPlan, Settings pages; added `LoadingScreen` fallback | Main chunk reduced from ~779 kB to ~363 kB; chunk warning eliminated |
 | FastAPI startup | Replaced `@app.on_event("startup")` with `contextlib.asynccontextmanager` lifespan | Deprecation warnings eliminated from test output |
 
+## 8. Docker Deployment Verification (Task 50)
+
+```bash
+docker compose -f docker-compose.prod.yml config   # ✅ Validated
+docker compose -f docker-compose.prod.yml up --build -d  # ✅ Built & started
+```
+
+| Check | Result |
+|-------|--------|
+| `GET http://localhost:8000/health` | ✅ `{"status":"ok"}` |
+| `GET http://localhost:3000` | ✅ HTTP 200 |
+| `POST /api/v1/auth/register` | ✅ Returns access_token + user |
+| `POST /api/v1/auth/login` | ✅ Returns access_token + user |
+| `GET /api/v1/dashboard/stats` (with Bearer) | ✅ Empty stats for new user |
+| `GET /api/v1/users/me/coaching-plan` | ✅ Beginner plan returned |
+| `GET /api/v1/users/me/goals` | ✅ Empty goals list |
+| `GET /api/v1/users/me/analytics` | ✅ Empty analytics |
+| `GET /api/v1/users/me/profile` | ✅ Profile with user data |
+
+### Docker files verified
+
+| File | Status | Notes |
+|------|--------|-------|
+| `Dockerfile.api` | ✅ Verified | Python 3.12-slim, ffmpeg/libgl1, requirements, exposes 8000, uvicorn CMD |
+| `frontend/Dockerfile` | ✅ Verified | Node multi-stage build, nginx static serve, SPA fallback, VITE_API_BASE_URL arg |
+| `docker-compose.prod.yml` | ✅ Verified | api + web services, named volumes for SQLite + uploads, healthcheck dependency |
+| `.env.production.example` | ✅ Verified | All required vars documented with safe defaults |
+| `.dockerignore` | ✅ Updated | Added frontend/mobile node_modules, dist, .expo, .streamlit |
+| `docs/DEPLOYMENT_WEB_API.md` | ✅ Updated | v1.3.0 endpoints, Docker verification commands, first-build-slow note |
+
 ---
 
-## 8. Next Technical Roadmap (v1.4.0+)
+## 9. Next Technical Roadmap (v1.4.0+)
 
 | Priority | Item | Rationale |
 |----------|------|-----------|
@@ -173,7 +203,7 @@ The following cleanup was performed after the initial QA pass:
 
 ---
 
-## 9. Sign-Off
+## 10. Sign-Off
 
 | Check | Status |
 |-------|--------|
@@ -183,6 +213,10 @@ The following cleanup was performed after the initial QA pass:
 | Mobile TypeScript passes | ✅ |
 | Auth & isolation verified | ✅ |
 | Coaching plan & goals verified | ✅ |
+| React bundle split (Task 49) | ✅ |
+| FastAPI lifespan migrated (Task 49) | ✅ |
+| Docker config validated (Task 50) | ✅ |
+| Docker build & run verified (Task 50) | ✅ |
 | Docs updated | ✅ |
 | No schema changes required | ✅ |
 
