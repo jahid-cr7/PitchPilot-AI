@@ -60,6 +60,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### VPS Launch Runbook (Task 54)
 - **`docs/VPS_LAUNCH_RUNBOOK.md`** — Complete launch checklist covering: pre-launch requirements (VPS, domain, DNS, Docker, `.env`, secrets, Caddy, firewall), DNS propagation verification, UFW firewall commands, deployment commands (git pull, compose validation, `deploy_vps.sh`), health checks (API, frontend, register/login, dashboard, upload, coaching plan, goals), automated backup cron setup, rollback procedures (code revert + DB restore), weekly monitoring checklist (container status, disk usage, backups, restarts), and a common launch errors reference table with causes and fixes.
 
+### CI/CD Release Pipeline (Task 55)
+- **`.github/workflows/ci.yml`** — Replaced basic smoke-test workflow with a comprehensive 4-job CI pipeline:
+  - `backend-tests` — Python 3.12 setup, system deps (`ffmpeg`, `libgl1`), pip dependency caching, `compileall` check, and full `pytest` suite (51 tests) with safe test environment variables.
+  - `frontend-build` — Node.js 20, npm caching via `package-lock.json`, `npm ci`, and `npm run build`.
+  - `mobile-typecheck` — Node.js 20, npm caching, `npm ci`, and `npx tsc --noEmit`.
+  - `docker-config` — Validates both `docker-compose.prod.yml` and `docker-compose.vps.yml` without building images.
+- **`README.md`** — Added GitHub Actions CI badge to the header.
+- **`docs/VPS_LAUNCH_RUNBOOK.md`** — Added CI passing check to the pre-launch checklist.
+
+---
+
+## [v1.3.1] - 2026-07-20
+
+### Playwright E2E Tests (Task 56)
+
+### Added
+- **Playwright E2E test suite** — `frontend/e2e/` with three spec files:
+  - `auth.spec.ts` — homepage, register, login page loads; protected dashboard redirects to login when logged out.
+  - `auth-flow.spec.ts` — full user journey: register → auto-login → dashboard → logout → re-login → logout → verify redirect.
+  - `coaching-plan.spec.ts` — open `/coaching-plan`, verify empty/default state, create goal, complete goal, delete goal.
+- **`frontend/playwright.config.ts`** — Chromium-only, `baseURL: http://127.0.0.1:5173`, `webServer` with `npm run dev`, CI-safe timeouts and retries.
+- **Frontend package scripts** — `"test:e2e": "playwright test"` and `"test:e2e:ui": "playwright test --ui"`.
+- **Stable test selectors** — Minimal `data-testid` attributes added to login email/password inputs, register name/email/password inputs, logout button, and coaching goal form fields (title, metric, target, save). `GradientButton` now forwards `React.ButtonHTMLAttributes` so `data-testid` propagates correctly.
+- **CI E2E job** — `.github/workflows/ci.yml` gains an `e2e-tests` job that starts the FastAPI backend, installs Playwright Chromium, and runs the full E2E suite on every push/PR. Uses safe test environment variables and uploads the Playwright report on failure.
+- **Documentation** — New `docs/E2E_TESTING.md` with prerequisites, local run instructions (Terminal 1 backend + Terminal 2 frontend), environment variables, test design principles, CI notes, troubleshooting table, and known limitations (no video upload E2E yet).
+
+### Changed
+- `README.md` — Added E2E testing section with run commands and reference to `docs/E2E_TESTING.md`.
+
 ---
 
 ## [v1.2.0] - 2026-07-19

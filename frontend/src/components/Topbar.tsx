@@ -75,6 +75,7 @@ export default function Topbar() {
             </div>
             <button
               onClick={handleLogout}
+              data-testid="logout-button"
               className="hidden items-center gap-1.5 rounded-lg border border-slate-700/30 bg-slate-800/40 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:text-slate-100 md:inline-flex"
               title="Sign out"
             >
@@ -83,6 +84,7 @@ export default function Topbar() {
             </button>
             <button
               onClick={handleLogout}
+              data-testid="logout-button-mobile"
               className="rounded-lg border border-slate-700/30 bg-slate-800/40 p-2 text-slate-400 hover:text-slate-200 md:hidden"
               title="Sign out"
               aria-label="Sign out"

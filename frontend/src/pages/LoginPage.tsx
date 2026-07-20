@@ -101,6 +101,7 @@ export default function LoginPage() {
               <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
               <input
                 id="email"
+                data-testid="login-email"
                 type="email"
                 autoComplete="email"
                 required
@@ -124,6 +125,7 @@ export default function LoginPage() {
               <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
               <input
                 id="password"
+                data-testid="login-password"
                 type="password"
                 autoComplete="current-password"
                 required

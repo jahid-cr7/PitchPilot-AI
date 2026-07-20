@@ -5,6 +5,7 @@
   <img src="https://img.shields.io/badge/Streamlit-1.58.0-ff4b4b.svg" alt="Streamlit">
   <img src="https://img.shields.io/badge/OpenCV-4.13-green.svg" alt="OpenCV">
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License">
+  <img src="https://github.com/jahid-cr7/PitchPilot-AI/actions/workflows/ci.yml/badge.svg" alt="CI">
 </p>
 
 **AI Interview & Presentation Coach** — Practice smarter, get structured feedback, and track your improvement over time.
@@ -420,6 +421,44 @@ For deploying to a VPS, Render, Railway, Fly.io, or AWS/GCP/Azure:
 ### CI
 
 GitHub Actions CI is configured to compile-check the code and run smoke tests on every push and pull request.
+
+---
+
+## End-to-End Browser Tests
+
+PitchPilot AI uses [Playwright](https://playwright.dev) for real-browser E2E tests of the React frontend.
+
+### Quick start
+
+Terminal 1 — start the backend:
+```bash
+python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
+```
+
+Terminal 2 — run the E2E suite:
+```bash
+cd frontend
+npm run test:e2e
+```
+
+To debug interactively:
+```bash
+cd frontend
+npm run test:e2e:ui
+```
+
+### What is tested
+- Homepage, login, and register page loads
+- Protected-route redirect when logged out
+- Full auth flow: register → login → dashboard → logout
+- Coaching plan: view, create goal, complete goal, delete goal
+
+### What is NOT tested yet
+- Video upload and analysis (heavy ML dependencies)
+- AI Coach feedback generation
+- Report export
+
+See [`docs/E2E_TESTING.md`](docs/E2E_TESTING.md) for full details on environment variables, CI integration, and troubleshooting.
 
 ---
 

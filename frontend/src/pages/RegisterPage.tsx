@@ -93,6 +93,7 @@ export default function RegisterPage() {
               <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
               <input
                 id="name"
+                data-testid="register-name"
                 type="text"
                 autoComplete="name"
                 required
@@ -113,6 +114,7 @@ export default function RegisterPage() {
               <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
               <input
                 id="email"
+                data-testid="register-email"
                 type="email"
                 autoComplete="email"
                 required
@@ -133,6 +135,7 @@ export default function RegisterPage() {
               <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
               <input
                 id="password"
+                data-testid="register-password"
                 type="password"
                 autoComplete="new-password"
                 required

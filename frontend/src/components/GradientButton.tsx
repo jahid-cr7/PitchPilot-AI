@@ -8,6 +8,7 @@ interface Props {
   variant?: "primary" | "secondary" | "ghost";
   className?: string;
   type?: "button" | "submit";
+  "data-testid"?: string;
 }
 
 export default function GradientButton({
@@ -17,6 +18,7 @@ export default function GradientButton({
   variant = "primary",
   className = "",
   type = "button",
+  "data-testid": dataTestId,
 }: Props) {
   const base =
     variant === "primary"
@@ -33,6 +35,7 @@ export default function GradientButton({
       onClick={onClick}
       disabled={disabled}
       className={`${base} transition-all disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      data-testid={dataTestId}
     >
       {children}
     </motion.button>
