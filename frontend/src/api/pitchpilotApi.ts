@@ -25,6 +25,8 @@ import type {
   GoalCreateRequest,
   GoalUpdateRequest,
   RobotLessonResponse,
+  RobotLessonsListResponse,
+  RobotLesson,
 } from "../types/pitchpilot";
 
 const DEFAULT_BASE_URL =
@@ -385,5 +387,29 @@ export const pitchpilotApi = {
       },
     );
     return handleResponse<RobotLessonResponse>(res);
+  },
+
+  async getRobotLessons() {
+    const res = await fetchWithTimeout(
+      buildUrl("/api/v1/coach/robot-lessons"),
+      {},
+    );
+    return handleResponse<RobotLessonsListResponse>(res);
+  },
+
+  async getRobotLesson(lessonId: number) {
+    const res = await fetchWithTimeout(
+      buildUrl(`/api/v1/coach/robot-lessons/${lessonId}`),
+      {},
+    );
+    return handleResponse<{ status: string; lesson: RobotLesson }>(res);
+  },
+
+  async deleteRobotLesson(lessonId: number) {
+    const res = await fetchWithTimeout(
+      buildUrl(`/api/v1/coach/robot-lessons/${lessonId}`),
+      { method: "DELETE" },
+    );
+    return handleResponse<{ status: string; message: string }>(res);
   },
 };

@@ -99,6 +99,26 @@ The mobile Feedback screen shows a "Robot Coach Lesson" card with Coach Nova's a
 - Downloadable lesson video/audio
 - Mobile-native TTS with Expo Speech
 
+## Saved Lesson History
+
+Generated lessons are automatically saved to the database so users can replay them later.
+
+### Backend endpoints
+
+- `POST /api/v1/coach/robot-lesson` — Generates and saves a lesson. Returns `lesson_id`.
+- `GET /api/v1/coach/robot-lessons` — Lists all saved lessons for the authenticated user.
+- `GET /api/v1/coach/robot-lessons/{lesson_id}` — Returns a single saved lesson (owner-only).
+- `DELETE /api/v1/coach/robot-lessons/{lesson_id}` — Deletes a saved lesson (owner-only).
+
+### Frontend
+
+- **Robot Coach Page** (`/robot-coach`) — Shows a "Saved Lesson" badge when the lesson has a `lesson_id`, and a "View Saved Lessons" button.
+- **Saved Lessons Page** (`/robot-lessons`) — Grid of all saved lessons with title, focus area, duration, created date, open, and delete actions. Opening a saved lesson replays it in the same Robot Coach player.
+
+### Mobile
+
+- The mobile Feedback screen shows both "Open Robot Coach" and "Saved Lessons" buttons on the Robot Coach card.
+
 ## Testing
 
 Run the robot coach tests:
@@ -111,5 +131,7 @@ Tests cover:
 - Auth requirement (401 without token)
 - Cross-user session isolation (404 when accessing another user's session)
 - Fallback generation without AI key
-- Response structure (spoken_script, practice_steps, subtitles, duration)
+- Response structure (lesson_id, spoken_script, practice_steps, subtitles, duration)
 - All focus_area variants
+- Saved lesson history CRUD (list, get, delete)
+- Cross-user lesson isolation (list, get, delete)

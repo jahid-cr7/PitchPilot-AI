@@ -1004,23 +1004,63 @@ def generate_robot_lesson(
     subtitles = _robot_lesson_subtitles(spoken_script)
     estimated = len(subtitles) * 4
 
+    lesson_data = {
+        "title": template["title"],
+        "coach_name": "Coach Nova",
+        "lesson_type": lesson_type,
+        "focus_area": focus_area,
+        "problem_summary": template["problem_summary"],
+        "why_it_matters": template["why_it_matters"],
+        "correct_method": template["correct_method"],
+        "better_example": template["better_example"],
+        "practice_steps": template["practice_steps"],
+        "spoken_script": spoken_script,
+        "subtitles": subtitles,
+        "estimated_duration_seconds": estimated,
+    }
+
+    # Save to database
+    from core.database import save_robot_lesson as _db_save_robot_lesson
+    lesson_id = _db_save_robot_lesson(
+        user_id=user_id,
+        session_id=session_id,
+        title=lesson_data["title"],
+        coach_name=lesson_data["coach_name"],
+        lesson_type=lesson_data["lesson_type"],
+        focus_area=lesson_data["focus_area"],
+        problem_summary=lesson_data["problem_summary"],
+        why_it_matters=lesson_data["why_it_matters"],
+        correct_method=lesson_data["correct_method"],
+        better_example=lesson_data["better_example"],
+        practice_steps=lesson_data["practice_steps"],
+        spoken_script=lesson_data["spoken_script"],
+        subtitles=lesson_data["subtitles"],
+        estimated_duration_seconds=lesson_data["estimated_duration_seconds"],
+    )
+
     return {
         "status": "success",
-        "lesson": {
-            "title": template["title"],
-            "coach_name": "Coach Nova",
-            "lesson_type": lesson_type,
-            "focus_area": focus_area,
-            "problem_summary": template["problem_summary"],
-            "why_it_matters": template["why_it_matters"],
-            "correct_method": template["correct_method"],
-            "better_example": template["better_example"],
-            "practice_steps": template["practice_steps"],
-            "spoken_script": spoken_script,
-            "subtitles": subtitles,
-            "estimated_duration_seconds": estimated,
-        },
+        "lesson_id": lesson_id,
+        "lesson": lesson_data,
     }
+
+
+# ---------------------------------------------------------------------------
+# Robot Lesson CRUD (thin wrappers)
+# ---------------------------------------------------------------------------
+def get_robot_lessons_service(user_id: int) -> List[Dict[str, Any]]:
+    from core.database import get_robot_lessons as _db_get_robot_lessons
+    return _db_get_robot_lessons(user_id)
+
+
+def get_robot_lesson_service(lesson_id: int, user_id: int) -> Optional[Dict[str, Any]]:
+    from core.database import get_robot_lesson_by_id as _db_get_robot_lesson_by_id
+    return _db_get_robot_lesson_by_id(lesson_id, user_id)
+
+
+def delete_robot_lesson_service(lesson_id: int, user_id: int) -> bool:
+    from core.database import delete_robot_lesson as _db_delete_robot_lesson
+    return _db_delete_robot_lesson(lesson_id, user_id)
 
 
 # ---------------------------------------------------------------------------

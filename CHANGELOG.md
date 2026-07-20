@@ -19,13 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **React Robot Coach page** (`/robot-coach`) — Video-style lesson screen with dark premium background, animated robot avatar with pulse/speak animation, subtitle player synced to playback, progress bar, play/pause/replay controls, browser text-to-speech (`window.speechSynthesis`), and four lesson cards (What Went Wrong, Why It Matters, Correct Method, Better Example) plus a Practice Steps checklist.
 - **Feedback page integration** — "Robot Coach Lesson" button appears on the Feedback page when a `session_id` exists, navigating to `/robot-coach` with the session ID.
 - **Mobile Robot Coach card** — Simple glass-morphism card on the mobile Feedback screen with Coach Nova avatar, description, and "Open Robot Coach" button as an entry point.
-- **Backend tests** — `tests/test_robot_coach.py` adds 5 tests covering auth requirement (401), cross-user session isolation (404), fallback generation without AI key, response structure (spoken_script, practice_steps, subtitles, duration), and all focus_area variants.
-- **Documentation** — `docs/ROBOT_COACH_LESSON.md` covers purpose, endpoint, request/response format, AI vs fallback behavior, frontend playback behavior, mobile simplification, limitations, and future roadmap. `docs/ROBOT_COACH_QA_V1_4.md` provides the full QA checklist for backend endpoints, web flow, mobile card, auth isolation, browser TTS, and fallback mode.
+- **Saved Robot Lesson History** — Generated lessons are automatically persisted to a new `robot_lessons` SQLite table. New endpoints: `GET /api/v1/coach/robot-lessons` (list), `GET /api/v1/coach/robot-lessons/{id}` (get), `DELETE /api/v1/coach/robot-lessons/{id}` (delete). All endpoints are JWT-protected and user-scoped.
+- **React Saved Lessons page** (`/robot-lessons`) — Grid of saved lessons with title, focus area, duration, created date, open, and delete actions. Opening a saved lesson replays it in the Robot Coach player.
+- **Robot Coach page updates** — Shows a green "Saved Lesson" badge when the lesson has a database ID, and a "View Saved Lessons" button for quick navigation.
+- **Backend tests** — `tests/test_robot_coach.py` adds 11 tests covering auth requirement (401), cross-user session isolation (404), fallback generation without AI key, response structure (lesson_id, spoken_script, practice_steps, subtitles, duration), all focus_area variants, saved lesson CRUD, and cross-user lesson isolation for list/get/delete.
+- **Documentation** — `docs/ROBOT_COACH_LESSON.md` covers purpose, endpoint, request/response format, AI vs fallback behavior, frontend playback behavior, mobile simplification, saved history, limitations, and future roadmap. `docs/ROBOT_COACH_QA_V1_4.md` provides the full QA checklist for backend endpoints, web flow, mobile card, auth isolation, browser TTS, fallback mode, and saved history.
 - **E2E tests** — `frontend/e2e/robot-coach.spec.ts` adds 2 lightweight Playwright tests: protected route redirect when logged out, and friendly empty state when no session context is provided.
 
 ### Changed
 - `frontend/src/pages/FeedbackPage.tsx` — adds "Robot Coach Lesson" button next to export buttons when `sessionId` is present.
-- `frontend/src/App.tsx` — adds lazy-loaded `/robot-coach` protected route.
+- `frontend/src/App.tsx` — adds lazy-loaded `/robot-coach` and `/robot-lessons` protected routes.
 - `README.md` — adds Robot Coach Lesson to the Key Features table and a dedicated "AI Robot Coach Lesson Mode" section with usage flow.
 - `RELEASE_NOTES.md` — adds v1.4.0 release notes with summary, feature breakdown, upgrade notes, and known limitations.
 

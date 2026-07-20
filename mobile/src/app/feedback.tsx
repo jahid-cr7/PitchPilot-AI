@@ -296,11 +296,17 @@ export default function FeedbackScreen() {
               <Text style={styles.coachSummary}>
                 Get a personalized robot coach lesson based on this session's weaknesses and strengths.
               </Text>
-              <View style={{ marginTop: spacing.md }}>
+              <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
                 <GradientButton
                   title="Open Robot Coach"
                   onPress={() => router.push(`/robot-coach?sessionId=${sessionId}` as any)}
                   icon={<Ionicons name="play-circle" size={18} color="#fff" />}
+                />
+                <GradientButton
+                  title="Saved Lessons"
+                  variant="secondary"
+                  onPress={() => router.push('/robot-lessons' as any)}
+                  icon={<Ionicons name="library" size={18} color={colors.textPrimary} />}
                 />
               </View>
             </GlassCard>

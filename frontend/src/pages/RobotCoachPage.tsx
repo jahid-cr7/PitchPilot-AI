@@ -14,6 +14,9 @@ import {
   BookOpen,
   Compass,
   Bot,
+  CheckCircle,
+  Clock,
+  Library,
 } from "lucide-react";
 import MotionCard from "../components/MotionCard";
 import GradientButton from "../components/GradientButton";
@@ -23,6 +26,8 @@ import type { RobotLesson } from "../types/pitchpilot";
 
 interface LocationState {
   sessionId?: number;
+  lessonId?: number;
+  lesson?: RobotLesson;
 }
 
 function useSpeechSynthesis() {
@@ -38,9 +43,11 @@ export default function RobotCoachPage() {
   const location = useLocation();
   const speechAvailable = useSpeechSynthesis();
 
-  const { sessionId } = (location.state as LocationState | null) || {};
+  const { sessionId, lessonId: incomingLessonId, lesson: incomingLesson } =
+    (location.state as LocationState | null) || {};
 
-  const [lesson, setLesson] = useState<RobotLesson | null>(null);
+  const [lesson, setLesson] = useState<RobotLesson | null>(incomingLesson || null);
+  const [lessonId, setLessonId] = useState<number | null>(incomingLessonId || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -53,6 +60,24 @@ export default function RobotCoachPage() {
   const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function fetchLesson() {
+    if (incomingLesson) {
+      // Already have lesson data from navigation
+      return;
+    }
+    if (incomingLessonId) {
+      setLoading(true);
+      setError("");
+      try {
+        const data = await pitchpilotApi.getRobotLesson(incomingLessonId);
+        setLesson(data.lesson);
+        setLessonId(incomingLessonId);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load lesson.");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
     if (!sessionId) return;
     setLoading(true);
     setError("");
@@ -63,6 +88,7 @@ export default function RobotCoachPage() {
         focus_area: "overall",
       });
       setLesson(data.lesson);
+      setLessonId(data.lesson_id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load lesson.");
     } finally {
@@ -71,14 +97,12 @@ export default function RobotCoachPage() {
   }
 
   useEffect(() => {
-    if (sessionId) {
-      void fetchLesson();
-    }
+    void fetchLesson();
     return () => {
       stopPlayback();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId]);
+  }, [sessionId, incomingLessonId]);
 
   function stopPlayback() {
     if (timerRef.current) {
@@ -162,7 +186,7 @@ export default function RobotCoachPage() {
     setTimeout(() => startPlayback(), 100);
   }
 
-  if (!sessionId) {
+  if (!sessionId && !incomingLessonId && !incomingLesson) {
     return (
       <div className="space-y-6">
         <div>
@@ -234,14 +258,28 @@ export default function RobotCoachPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-[#e5edff]">Robot Coach</h1>
-          <p className="text-xs text-slate-400">AI-powered video-style lesson.</p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-[#e5edff]">Robot Coach</h1>
+            <p className="text-xs text-slate-400">AI-powered video-style lesson.</p>
+          </div>
+          {lessonId && (
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-300">
+              <CheckCircle className="h-3 w-3" />
+              Saved Lesson
+            </div>
+          )}
         </div>
-        <GradientButton variant="secondary" onClick={() => navigate("/feedback")}>
-          <ArrowLeft className="mr-1.5 inline h-3.5 w-3.5" />
-          Back to Feedback
-        </GradientButton>
+        <div className="flex flex-wrap gap-2">
+          <GradientButton variant="secondary" onClick={() => navigate("/robot-lessons")}>
+            <Library className="mr-1.5 inline h-3.5 w-3.5" />
+            View Saved Lessons
+          </GradientButton>
+          <GradientButton variant="secondary" onClick={() => navigate("/feedback")}>
+            <ArrowLeft className="mr-1.5 inline h-3.5 w-3.5" />
+            Back to Feedback
+          </GradientButton>
+        </div>
       </div>
 
       {/* Video-style player */}
@@ -316,7 +354,10 @@ export default function RobotCoachPage() {
             </div>
             <div className="mt-1 flex justify-between text-[10px] text-slate-500">
               <span>{Math.round((progress / 100) * lesson.estimated_duration_seconds)}s</span>
-              <span>{lesson.estimated_duration_seconds}s</span>
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {lesson.estimated_duration_seconds}s
+              </span>
             </div>
           </div>
 

@@ -108,6 +108,26 @@ Expected: 5 tests passing (auth, isolation, fallback, structure, focus_area vari
 
 ---
 
+## Saved Lesson History Checklist
+
+| # | Check | Step | Expected Result | Status |
+|---|-------|------|-----------------|--------|
+| 1 | POST returns lesson_id | Generate a lesson | Response includes `lesson_id` > 0 | PASS |
+| 2 | Lesson is saved to DB | Generate, then GET list | Lesson appears in list | PASS |
+| 3 | GET list requires auth | `GET /api/v1/coach/robot-lessons` without token | 401 | PASS |
+| 4 | GET list returns only own lessons | User A and B each generate lessons | List only shows caller's lessons | PASS |
+| 5 | GET single lesson works | `GET /api/v1/coach/robot-lessons/{id}` with own lesson | 200 with full lesson data | PASS |
+| 6 | GET single requires owner | User B tries User A's lesson_id | 404 | PASS |
+| 7 | DELETE lesson works | `DELETE` own lesson | 200, lesson removed from list | PASS |
+| 8 | DELETE requires owner | User B tries to delete User A's lesson | 404 | PASS |
+| 9 | Web Saved Lessons page loads | Navigate to `/robot-lessons` | Grid of saved lessons visible | PASS |
+| 10 | Open saved lesson replays it | Click "Open Lesson" on a saved card | Navigates to `/robot-coach` with lesson data | PASS |
+| 11 | Delete from web works | Click trash icon on saved lesson | Card removed, toast confirms | PASS |
+| 12 | "Saved Lesson" badge shown | Generate lesson, go to `/robot-coach` | Green "Saved Lesson" badge visible | PASS |
+| 13 | "View Saved Lessons" button works | Click button on `/robot-coach` | Navigates to `/robot-lessons` | PASS |
+
+---
+
 ## Known Limitations
 
 - **No real AI video generation yet** — The robot coach is a text + TTS + animation UI, not a generated video file.
@@ -115,7 +135,6 @@ Expected: 5 tests passing (auth, isolation, fallback, structure, focus_area vari
 - **Single focus area per lesson** — Users must request a new lesson to switch focus areas.
 - **Mobile UI is simplified** — The full animated player is on the React web app; mobile shows an entry card only.
 - **TTS voice depends on browser** — `speechSynthesis` voice quality and language vary by OS/browser.
-- **No offline lesson storage** — Lessons are generated on demand and not cached in localStorage or the database.
 
 ---
 
@@ -123,7 +142,7 @@ Expected: 5 tests passing (auth, isolation, fallback, structure, focus_area vari
 
 | Role | Name | Date | Result |
 |------|------|------|--------|
-| Backend QA | Automated (pytest) | 2026-07-20 | PASS (56/56) |
+| Backend QA | Automated (pytest) | 2026-07-20 | PASS (62/62) |
 | Frontend Build | Automated (tsc + vite) | 2026-07-20 | PASS |
-| E2E Tests | Automated (Playwright) | 2026-07-20 | PASS (10/10) |
+| E2E Tests | Automated (Playwright) | 2026-07-20 | PASS (12/12) |
 | Mobile TypeCheck | Automated (tsc --noEmit) | 2026-07-20 | PASS |

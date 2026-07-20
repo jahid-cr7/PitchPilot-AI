@@ -411,4 +411,31 @@ class RobotLesson(BaseModel):
 
 class RobotLessonResponse(BaseModel):
     status: str
+    lesson_id: int
     lesson: RobotLesson
+
+
+class RobotLessonSummary(BaseModel):
+    id: int
+    session_id: int
+    title: str
+    coach_name: str
+    lesson_type: str
+    focus_area: str
+    estimated_duration_seconds: int
+    created_at: str
+
+
+class RobotLessonsListResponse(BaseModel):
+    status: str = "success"
+    lessons: List[RobotLessonSummary]
+
+
+class RobotLessonDetailResponse(BaseModel):
+    status: str = "success"
+    lesson: RobotLesson
+
+
+class RobotLessonDeleteResponse(BaseModel):
+    status: str = "success"
+    message: str

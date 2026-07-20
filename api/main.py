@@ -780,6 +780,85 @@ async def robot_lesson(
         )
 
 
+@app.get(
+    "/api/v1/coach/robot-lessons",
+    response_model=schemas.RobotLessonsListResponse,
+    responses={401: {"model": schemas.ErrorResponse}, 500: {"model": schemas.ErrorResponse}},
+)
+async def list_robot_lessons(
+    user: dict = Depends(get_current_user),
+) -> schemas.RobotLessonsListResponse:
+    """List all saved robot coach lessons for the authenticated user."""
+    lessons = services.get_robot_lessons_service(user_id=int(user["id"]))
+    return schemas.RobotLessonsListResponse(
+        lessons=[schemas.RobotLessonSummary(**lesson) for lesson in lessons],
+    )
+
+
+@app.get(
+    "/api/v1/coach/robot-lessons/{lesson_id}",
+    response_model=schemas.RobotLessonDetailResponse,
+    responses={
+        401: {"model": schemas.ErrorResponse},
+        404: {"model": schemas.ErrorResponse},
+        500: {"model": schemas.ErrorResponse},
+    },
+)
+async def get_robot_lesson(
+    lesson_id: int,
+    user: dict = Depends(get_current_user),
+) -> schemas.RobotLessonDetailResponse:
+    """Return a single saved robot coach lesson owned by the caller."""
+    lesson = services.get_robot_lesson_service(lesson_id=lesson_id, user_id=int(user["id"]))
+    if lesson is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Lesson not found.",
+        )
+    # Normalize DB row to API schema
+    api_lesson = schemas.RobotLesson(
+        title=lesson["title"],
+        coach_name=lesson["coach_name"],
+        lesson_type=lesson["lesson_type"],
+        focus_area=lesson["focus_area"],
+        problem_summary=lesson["problem_summary"],
+        why_it_matters=lesson["why_it_matters"],
+        correct_method=lesson["correct_method"],
+        better_example=lesson["better_example"],
+        practice_steps=lesson["practice_steps"],
+        spoken_script=lesson["spoken_script"],
+        subtitles=[schemas.SubtitleItem(**sub) for sub in lesson["subtitles"]],
+        estimated_duration_seconds=lesson["estimated_duration_seconds"],
+    )
+    return schemas.RobotLessonDetailResponse(lesson=api_lesson)
+
+
+@app.delete(
+    "/api/v1/coach/robot-lessons/{lesson_id}",
+    response_model=schemas.RobotLessonDeleteResponse,
+    responses={
+        401: {"model": schemas.ErrorResponse},
+        404: {"model": schemas.ErrorResponse},
+        500: {"model": schemas.ErrorResponse},
+    },
+)
+async def delete_robot_lesson_endpoint(
+    lesson_id: int,
+    user: dict = Depends(get_current_user),
+) -> schemas.RobotLessonDeleteResponse:
+    """Delete a saved robot coach lesson owned by the caller."""
+    deleted = services.delete_robot_lesson_service(lesson_id=lesson_id, user_id=int(user["id"]))
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Lesson not found.",
+        )
+    return schemas.RobotLessonDeleteResponse(
+        status="success",
+        message="Lesson deleted successfully.",
+    )
+
+
 # ---------------------------------------------------------------------------
 # User Goals
 # ---------------------------------------------------------------------------

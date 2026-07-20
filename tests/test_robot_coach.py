@@ -1,17 +1,18 @@
 """tests/test_robot_coach.py
 ===========================
-Backend tests for the Robot Coach Lesson endpoint.
+Backend tests for the Robot Coach Lesson endpoint and saved lesson history.
 
 Covers:
 - Auth requirement
 - Cross-user session isolation
 - Fallback lesson generation without AI key
-- Response structure (spoken_script, practice_steps, subtitles)
+- Response structure (lesson_id, spoken_script, practice_steps, subtitles)
+- Saved lesson history CRUD (list, get, delete)
+- Cross-user lesson isolation
 """
 
 from __future__ import annotations
 
-import importlib
 import os
 import sys
 import tempfile
@@ -60,7 +61,6 @@ def _register_and_login(client, email: str, password: str, name: str = "Test") -
 
 def _create_session_for_user(client, token: str) -> int:
     """Create a minimal saved session by calling the full analysis endpoint with a tiny MP4."""
-    # Create a minimal fake MP4 file (just bytes with .mp4 extension)
     fake_mp4 = b"\x00\x00\x00\x20ftypmp42" + b"\x00" * 100
     res = client.post(
         "/api/v1/analyze/full",
@@ -74,6 +74,16 @@ def _create_session_for_user(client, token: str) -> int:
     )
     assert res.status_code == 200, res.text
     return res.json()["session_id"]
+
+
+def _generate_lesson(client, token: str, session_id: int):
+    r = client.post(
+        "/api/v1/coach/robot-lesson",
+        json={"session_id": session_id, "lesson_type": "interview", "focus_area": "overall"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 200, r.text
+    return r.json()
 
 
 class TestRobotCoachAuth:
@@ -97,11 +107,9 @@ class TestRobotCoachIsolation:
         token_a = _register_and_login(client, "user-a@example.com", "password123")
         token_b = _register_and_login(client, "user-b@example.com", "password123")
 
-        # User A creates a session
         sid = _create_session_for_user(client, token_a)
         assert sid is not None
 
-        # User B tries to generate a lesson from A's session
         r = client.post(
             "/api/v1/coach/robot-lesson",
             json={"session_id": sid},
@@ -116,15 +124,10 @@ class TestRobotCoachFallback:
         sid = _create_session_for_user(client, token)
         assert sid is not None
 
-        r = client.post(
-            "/api/v1/coach/robot-lesson",
-            json={"session_id": sid, "lesson_type": "interview", "focus_area": "overall"},
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        assert r.status_code == 200, r.text
-        data = r.json()
+        data = _generate_lesson(client, token, sid)
 
         assert data["status"] == "success"
+        assert isinstance(data["lesson_id"], int) and data["lesson_id"] > 0
         lesson = data["lesson"]
 
         assert lesson["coach_name"] == "Coach Nova"
@@ -136,11 +139,9 @@ class TestRobotCoachFallback:
         assert isinstance(lesson["correct_method"], str) and len(lesson["correct_method"]) > 0
         assert isinstance(lesson["better_example"], str) and len(lesson["better_example"]) > 0
 
-        # Must include spoken_script and practice_steps
         assert isinstance(lesson["spoken_script"], str) and len(lesson["spoken_script"]) > 0
         assert isinstance(lesson["practice_steps"], list) and len(lesson["practice_steps"]) >= 1
 
-        # Subtitles must be present
         subs = lesson["subtitles"]
         assert isinstance(subs, list) and len(subs) >= 1
         for sub in subs:
@@ -164,3 +165,105 @@ class TestRobotCoachFallback:
             assert r.status_code == 200, f"focus_area={area} failed: {r.text}"
             data = r.json()
             assert data["lesson"]["focus_area"] == area
+            assert isinstance(data["lesson_id"], int) and data["lesson_id"] > 0
+
+
+class TestRobotLessonHistory:
+    def test_generating_lesson_saves_lesson_id(self, client):
+        token = _register_and_login(client, "history-gen@example.com", "password123")
+        sid = _create_session_for_user(client, token)
+        data = _generate_lesson(client, token, sid)
+        assert "lesson_id" in data
+        assert data["lesson_id"] > 0
+
+    def test_list_lessons_requires_auth(self, client):
+        r = client.get("/api/v1/coach/robot-lessons")
+        assert r.status_code == 401
+
+    def test_list_lessons_returns_saved_lessons(self, client):
+        token = _register_and_login(client, "history-list@example.com", "password123")
+        sid = _create_session_for_user(client, token)
+        _generate_lesson(client, token, sid)
+
+        r = client.get("/api/v1/coach/robot-lessons", headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert data["status"] == "success"
+        assert isinstance(data["lessons"], list)
+        assert len(data["lessons"]) >= 1
+        lesson = data["lessons"][0]
+        assert "id" in lesson
+        assert "title" in lesson
+        assert "focus_area" in lesson
+        assert "created_at" in lesson
+
+    def test_get_lesson_requires_owner(self, client):
+        token_a = _register_and_login(client, "history-get-a@example.com", "password123")
+        token_b = _register_and_login(client, "history-get-b@example.com", "password123")
+        sid = _create_session_for_user(client, token_a)
+        gen = _generate_lesson(client, token_a, sid)
+        lesson_id = gen["lesson_id"]
+
+        # User B cannot access
+        r = client.get(
+            f"/api/v1/coach/robot-lessons/{lesson_id}",
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
+        assert r.status_code == 404
+
+        # User A can access
+        r = client.get(
+            f"/api/v1/coach/robot-lessons/{lesson_id}",
+            headers={"Authorization": f"Bearer {token_a}"},
+        )
+        assert r.status_code == 200
+        assert r.json()["lesson"]["title"] == gen["lesson"]["title"]
+
+    def test_delete_lesson_requires_owner(self, client):
+        token_a = _register_and_login(client, "history-del-a@example.com", "password123")
+        token_b = _register_and_login(client, "history-del-b@example.com", "password123")
+        sid = _create_session_for_user(client, token_a)
+        gen = _generate_lesson(client, token_a, sid)
+        lesson_id = gen["lesson_id"]
+
+        # User B cannot delete
+        r = client.delete(
+            f"/api/v1/coach/robot-lessons/{lesson_id}",
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
+        assert r.status_code == 404
+
+        # User A can delete
+        r = client.delete(
+            f"/api/v1/coach/robot-lessons/{lesson_id}",
+            headers={"Authorization": f"Bearer {token_a}"},
+        )
+        assert r.status_code == 200
+        assert "deleted" in r.json()["message"].lower() or "success" in r.json()["status"].lower()
+
+    def test_user_a_cannot_access_user_b_lesson(self, client):
+        token_a = _register_and_login(client, "history-iso-a@example.com", "password123")
+        token_b = _register_and_login(client, "history-iso-b@example.com", "password123")
+
+        sid_a = _create_session_for_user(client, token_a)
+        gen = _generate_lesson(client, token_a, sid_a)
+        lesson_id = gen["lesson_id"]
+
+        # List
+        r = client.get("/api/v1/coach/robot-lessons", headers={"Authorization": f"Bearer {token_b}"})
+        assert r.status_code == 200
+        assert all(l["id"] != lesson_id for l in r.json()["lessons"])
+
+        # Get
+        r = client.get(
+            f"/api/v1/coach/robot-lessons/{lesson_id}",
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
+        assert r.status_code == 404
+
+        # Delete
+        r = client.delete(
+            f"/api/v1/coach/robot-lessons/{lesson_id}",
+            headers={"Authorization": f"Bearer {token_b}"},
+        )
+        assert r.status_code == 404

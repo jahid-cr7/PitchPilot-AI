@@ -75,6 +75,43 @@ CREATE TABLE IF NOT EXISTS users (
 );
 """
 
+CREATE_USER_GOALS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS user_goals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    target_metric TEXT NOT NULL,
+    target_value REAL NOT NULL,
+    current_value REAL NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT NOT NULL,
+    completed_at TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+"""
+
+CREATE_ROBOT_LESSONS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS robot_lessons (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    session_id INTEGER,
+    title TEXT NOT NULL,
+    coach_name TEXT NOT NULL,
+    lesson_type TEXT NOT NULL,
+    focus_area TEXT NOT NULL,
+    problem_summary TEXT NOT NULL,
+    why_it_matters TEXT NOT NULL,
+    correct_method TEXT NOT NULL,
+    better_example TEXT NOT NULL,
+    practice_steps_json TEXT NOT NULL,
+    spoken_script TEXT NOT NULL,
+    subtitles_json TEXT NOT NULL,
+    estimated_duration_seconds INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+"""
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -124,6 +161,20 @@ def _ensure_user_id_column(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE practice_sessions ADD COLUMN user_id INTEGER")
 
 
+def _ensure_user_goals_table(conn: sqlite3.Connection) -> None:
+    """Migration-safe: create user_goals table if it does not exist."""
+    cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='user_goals'")
+    if not cursor.fetchone():
+        conn.execute(CREATE_USER_GOALS_TABLE_SQL)
+
+
+def _ensure_robot_lessons_table(conn: sqlite3.Connection) -> None:
+    """Migration-safe: create robot_lessons table if it does not exist."""
+    cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='robot_lessons'")
+    if not cursor.fetchone():
+        conn.execute(CREATE_ROBOT_LESSONS_TABLE_SQL)
+
+
 def init_db() -> None:
     """Initialize the database and create tables if they do not exist."""
     try:
@@ -131,6 +182,8 @@ def init_db() -> None:
         conn.execute(CREATE_TABLE_SQL)
         conn.execute(CREATE_USERS_TABLE_SQL)
         _ensure_user_id_column(conn)
+        _ensure_user_goals_table(conn)
+        _ensure_robot_lessons_table(conn)
         conn.commit()
         conn.close()
     except Exception as exc:
@@ -400,3 +453,229 @@ def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
+
+
+# ---------------------------------------------------------------------------
+# User Goals
+# ---------------------------------------------------------------------------
+def create_user_goal(
+    user_id: int,
+    title: str,
+    target_metric: str,
+    target_value: float,
+    current_value: float = 0.0,
+) -> Dict[str, Any]:
+    """Insert a new goal for a user and return the created row."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    created_at = datetime.now(timezone.utc).isoformat()
+    cursor.execute(
+        "INSERT INTO user_goals (user_id, title, target_metric, target_value, "
+        "current_value, status, created_at) VALUES (?, ?, ?, ?, ?, 'active', ?)",
+        (user_id, title, target_metric, target_value, current_value, created_at),
+    )
+    goal_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return {
+        "id": goal_id,
+        "user_id": user_id,
+        "title": title,
+        "target_metric": target_metric,
+        "target_value": target_value,
+        "current_value": current_value,
+        "status": "active",
+        "created_at": created_at,
+        "completed_at": None,
+    }
+
+
+def get_user_goals(user_id: int) -> List[Dict[str, Any]]:
+    """Return all goals for a user, newest first."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, user_id, title, target_metric, target_value, current_value, "
+        "status, created_at, completed_at FROM user_goals "
+        "WHERE user_id = ? ORDER BY created_at DESC",
+        (user_id,),
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def get_user_goal_by_id(goal_id: int, user_id: int) -> Optional[Dict[str, Any]]:
+    """Return a single goal if owned by the given user."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, user_id, title, target_metric, target_value, current_value, "
+        "status, created_at, completed_at FROM user_goals "
+        "WHERE id = ? AND user_id = ?",
+        (goal_id, user_id),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def update_user_goal(
+    goal_id: int,
+    user_id: int,
+    title: Optional[str] = None,
+    target_metric: Optional[str] = None,
+    target_value: Optional[float] = None,
+    current_value: Optional[float] = None,
+    status: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """Update fields on a goal. Returns the updated goal or None if not found."""
+    existing = get_user_goal_by_id(goal_id, user_id)
+    if existing is None:
+        return None
+
+    new_title = title if title is not None else existing["title"]
+    new_metric = target_metric if target_metric is not None else existing["target_metric"]
+    new_target = target_value if target_value is not None else existing["target_value"]
+    new_current = current_value if current_value is not None else existing["current_value"]
+    new_status = status if status is not None else existing["status"]
+    completed_at = existing.get("completed_at")
+    if new_status == "completed" and status != existing.get("status"):
+        completed_at = datetime.now(timezone.utc).isoformat()
+    elif new_status != "completed":
+        completed_at = None
+
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE user_goals SET title=?, target_metric=?, target_value=?, "
+        "current_value=?, status=?, completed_at=? WHERE id=? AND user_id=?",
+        (new_title, new_metric, new_target, new_current, new_status, completed_at,
+         goal_id, user_id),
+    )
+    conn.commit()
+    conn.close()
+
+    return {
+        "id": goal_id,
+        "user_id": user_id,
+        "title": new_title,
+        "target_metric": new_metric,
+        "target_value": new_target,
+        "current_value": new_current,
+        "status": new_status,
+        "created_at": existing["created_at"],
+        "completed_at": completed_at,
+    }
+
+
+def delete_user_goal(goal_id: int, user_id: int) -> bool:
+    """Delete a goal by ID. Returns True if a row was deleted."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "DELETE FROM user_goals WHERE id = ? AND user_id = ?",
+        (goal_id, user_id),
+    )
+    deleted = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return deleted
+
+
+# ---------------------------------------------------------------------------
+# Robot Lessons
+# ---------------------------------------------------------------------------
+def save_robot_lesson(
+    user_id: int,
+    session_id: int,
+    title: str,
+    coach_name: str,
+    lesson_type: str,
+    focus_area: str,
+    problem_summary: str,
+    why_it_matters: str,
+    correct_method: str,
+    better_example: str,
+    practice_steps: List[str],
+    spoken_script: str,
+    subtitles: List[Dict[str, Any]],
+    estimated_duration_seconds: int,
+) -> int:
+    """Save a generated robot coach lesson to the database."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    row = {
+        "user_id": user_id,
+        "session_id": session_id,
+        "title": title,
+        "coach_name": coach_name,
+        "lesson_type": lesson_type,
+        "focus_area": focus_area,
+        "problem_summary": problem_summary,
+        "why_it_matters": why_it_matters,
+        "correct_method": correct_method,
+        "better_example": better_example,
+        "practice_steps_json": _to_json(practice_steps),
+        "spoken_script": spoken_script,
+        "subtitles_json": _to_json(subtitles),
+        "estimated_duration_seconds": estimated_duration_seconds,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    columns = ", ".join(row.keys())
+    placeholders = ", ".join(f":{k}" for k in row.keys())
+    cursor.execute(
+        f"INSERT INTO robot_lessons ({columns}) VALUES ({placeholders})",
+        row,
+    )
+    lesson_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return lesson_id
+
+
+def get_robot_lessons(user_id: int) -> List[Dict[str, Any]]:
+    """Return all robot lessons for a user, newest first."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, user_id, session_id, title, coach_name, lesson_type, focus_area, "
+        "estimated_duration_seconds, created_at FROM robot_lessons "
+        "WHERE user_id = ? ORDER BY created_at DESC",
+        (user_id,),
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def get_robot_lesson_by_id(lesson_id: int, user_id: int) -> Optional[Dict[str, Any]]:
+    """Return a single robot lesson if owned by the given user."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM robot_lessons WHERE id = ? AND user_id = ?",
+        (lesson_id, user_id),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    if row is None:
+        return None
+    lesson = dict(row)
+    lesson["practice_steps"] = _from_json(lesson.get("practice_steps_json", "[]"))
+    lesson["subtitles"] = _from_json(lesson.get("subtitles_json", "[]"))
+    return lesson
+
+
+def delete_robot_lesson(lesson_id: int, user_id: int) -> bool:
+    """Delete a robot lesson by ID. Returns True if a row was deleted."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "DELETE FROM robot_lessons WHERE id = ? AND user_id = ?",
+        (lesson_id, user_id),
+    )
+    deleted = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return deleted

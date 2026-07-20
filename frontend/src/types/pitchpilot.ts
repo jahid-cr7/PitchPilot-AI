@@ -269,5 +269,22 @@ export interface RobotLesson {
 
 export interface RobotLessonResponse {
   status: string;
+  lesson_id: number;
   lesson: RobotLesson;
+}
+
+export interface RobotLessonSummary {
+  id: number;
+  session_id: number;
+  title: string;
+  coach_name: string;
+  lesson_type: string;
+  focus_area: string;
+  estimated_duration_seconds: number;
+  created_at: string;
+}
+
+export interface RobotLessonsListResponse {
+  status: string;
+  lessons: RobotLessonSummary[];
 }
