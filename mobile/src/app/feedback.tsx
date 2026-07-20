@@ -279,6 +279,34 @@ export default function FeedbackScreen() {
           </>
         ) : null}
 
+        {/* Robot Coach Lesson Card */}
+        {sessionId ? (
+          <>
+            <SectionTitle title="Robot Coach Lesson" />
+            <GlassCard>
+              <View style={styles.coachHeader}>
+                <View style={[styles.coachAvatar, { backgroundColor: 'rgba(139,92,246,0.12)' }]}>
+                  <Ionicons name="hardware-chip" size={28} color={colors.purple} />
+                </View>
+                <View style={styles.coachMeta}>
+                  <Text style={styles.coachName}>Coach Nova</Text>
+                  <Text style={styles.coachModel}>AI-powered video lesson</Text>
+                </View>
+              </View>
+              <Text style={styles.coachSummary}>
+                Get a personalized robot coach lesson based on this session's weaknesses and strengths.
+              </Text>
+              <View style={{ marginTop: spacing.md }}>
+                <GradientButton
+                  title="Open Robot Coach"
+                  onPress={() => router.push(`/robot-coach?sessionId=${sessionId}` as any)}
+                  icon={<Ionicons name="play-circle" size={18} color="#fff" />}
+                />
+              </View>
+            </GlassCard>
+          </>
+        ) : null}
+
         {/* Actions */}
         <View style={styles.actions}>
           <GradientButton

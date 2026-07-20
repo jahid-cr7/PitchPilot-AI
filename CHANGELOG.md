@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.4.0] - 2026-07-20
+
+### Robot Coach Lesson Mode (Task 58)
+
+### Added
+- **Robot Coach Lesson endpoint** — `POST /api/v1/coach/robot-lesson` generates an AI-powered or rule-based video-style lesson from a saved session. Protected by JWT with strict user-scoped session lookup so User A cannot access User B's sessions.
+- **Lesson content structure** — Each lesson includes title, coach name (`Coach Nova`), problem summary, why-it-matters explanation, correct method, better example, practice steps, spoken script, subtitles with timestamps, and estimated duration.
+- **AI-powered generation** — When `PITCHPILOT_AI_API_KEY` is configured, the backend calls the LLM with a structured JSON prompt using session transcript, weaknesses, strengths, and overall score to produce a personalized lesson.
+- **Rule-based fallback** — Five focus-area templates (`answer_structure`, `speech`, `body_language`, `confidence`, `overall`) provide instant offline lessons. The problem summary is personalized with the user's actual weaknesses from the session.
+- **React Robot Coach page** (`/robot-coach`) — Video-style lesson screen with dark premium background, animated robot avatar with pulse/speak animation, subtitle player synced to playback, progress bar, play/pause/replay controls, browser text-to-speech (`window.speechSynthesis`), and four lesson cards (What Went Wrong, Why It Matters, Correct Method, Better Example) plus a Practice Steps checklist.
+- **Feedback page integration** — "Robot Coach Lesson" button appears on the Feedback page when a `session_id` exists, navigating to `/robot-coach` with the session ID.
+- **Mobile Robot Coach card** — Simple glass-morphism card on the mobile Feedback screen with Coach Nova avatar, description, and "Open Robot Coach" button as an entry point.
+- **Backend tests** — `tests/test_robot_coach.py` adds 5 tests covering auth requirement (401), cross-user session isolation (404), fallback generation without AI key, response structure (spoken_script, practice_steps, subtitles, duration), and all focus_area variants.
+- **Documentation** — `docs/ROBOT_COACH_LESSON.md` covers purpose, endpoint, request/response format, AI vs fallback behavior, frontend playback behavior, mobile simplification, limitations, and future roadmap.
+
+### Changed
+- `frontend/src/pages/FeedbackPage.tsx` — adds "Robot Coach Lesson" button next to export buttons when `sessionId` is present.
+- `frontend/src/App.tsx` — adds lazy-loaded `/robot-coach` protected route.
+- `README.md` — adds Robot Coach Lesson to the Key Features table.
+
+---
+
 ## [v1.3.0] - 2026-07-19
 
 ### Coaching & Goals Stabilization

@@ -18,6 +18,7 @@ const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const CoachingPlanPage = lazy(() => import("./pages/CoachingPlanPage"));
 const HistoryPage = lazy(() => import("./pages/HistoryPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const RobotCoachPage = lazy(() => import("./pages/RobotCoachPage"));
 
 export default function App() {
   return (
@@ -71,6 +72,14 @@ export default function App() {
                   element={
                     <ProtectedRoute>
                       <SettingsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/robot-coach"
+                  element={
+                    <ProtectedRoute>
+                      <RobotCoachPage />
                     </ProtectedRoute>
                   }
                 />

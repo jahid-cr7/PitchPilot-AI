@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from api import config, schemas, services
@@ -29,6 +29,7 @@ from api.auth import (
     hash_password,
     verify_password,
 )
+from api.rate_limiter import rate_limit
 from core.database import (
     create_user as _db_create_user,
     get_user_by_email as _db_get_user_by_email,
@@ -36,11 +37,53 @@ from core.database import (
 )
 
 # ---------------------------------------------------------------------------
+# Production safety checks
+# ---------------------------------------------------------------------------
+_INSECURE_SECRETS: set[str] = {
+    "",
+    "dev-insecure-secret-change-me",
+    "replace_me",
+    "replace_me_with_a_long_random_string",
+    "secret",
+    "password",
+}
+
+
+def _assert_safe_jwt_secret() -> None:
+    """Refuse to start in production with a weak or placeholder JWT secret."""
+    from api.auth import JWT_SECRET
+
+    if config.IS_PRODUCTION and (not JWT_SECRET or JWT_SECRET.strip() in _INSECURE_SECRETS):
+        raise RuntimeError(
+            "FATAL: PITCHPILOT_JWT_SECRET is missing or insecure in production. "
+            "Generate a strong secret with: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
+        )
+
+
+def _assert_safe_cors() -> None:
+    """Warn if production CORS origins are still at unsafe defaults."""
+    if not config.IS_PRODUCTION:
+        return
+    origins = config.CORS_ORIGINS
+    unsafe = {"http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000"}
+    if set(origins) <= unsafe:
+        import warnings
+
+        warnings.warn(
+            "WARNING: PITCHPILOT_CORS_ORIGINS is still set to localhost defaults in production. "
+            "Update it to your real frontend domain(s) before exposing the API publicly.",
+            stacklevel=2,
+        )
+
+
+# ---------------------------------------------------------------------------
 # Lifespan — startup / shutdown hooks
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize database and directories on startup."""
+    """Initialize database and directories on startup. Run safety checks."""
+    _assert_safe_jwt_secret()
+    _assert_safe_cors()
     config.ensure_dirs()
     init_db()
     yield
@@ -167,7 +210,11 @@ def _user_public(user: dict) -> schemas.UserPublic:
         409: {"model": schemas.ErrorResponse},
     },
 )
-async def register(payload: schemas.RegisterRequest) -> schemas.AuthTokenResponse:
+@rate_limit(max_requests=10, window_seconds=60, endpoint_name="auth_register")
+async def register(
+    request: Request,
+    payload: schemas.RegisterRequest,
+) -> schemas.AuthTokenResponse:
     """Register a new user account and return an access token."""
     email = payload.email.strip().lower()
     name = payload.name.strip()
@@ -215,7 +262,11 @@ async def register(payload: schemas.RegisterRequest) -> schemas.AuthTokenRespons
     response_model=schemas.AuthTokenResponse,
     responses={401: {"model": schemas.ErrorResponse}},
 )
-async def login(payload: schemas.LoginRequest) -> schemas.AuthTokenResponse:
+@rate_limit(max_requests=10, window_seconds=60, endpoint_name="auth_login")
+async def login(
+    request: Request,
+    payload: schemas.LoginRequest,
+) -> schemas.AuthTokenResponse:
     """Authenticate an existing user and return an access token."""
     user = _db_get_user_by_email(payload.email)
     if user is None or not verify_password(payload.password, user.get("password_hash", "")):
@@ -405,7 +456,9 @@ async def analyze_speech_endpoint(file: UploadFile = File(...)) -> schemas.Speec
         500: {"model": schemas.ErrorResponse},
     },
 )
+@rate_limit(max_requests=5, window_seconds=3600, endpoint_name="analyze_full")
 async def analyze_full_endpoint(
+    request: Request,
     file: UploadFile = File(...),
     question: str = Form(default="Tell me about yourself."),
     role: str = Form(default="Software Developer"),
@@ -420,6 +473,7 @@ async def analyze_full_endpoint(
     video -> camera -> speech -> AI coach -> final score.
 
     Requires authentication. The saved session is scoped to the caller's user id.
+    Rate limited to 5 requests per hour per IP.
     """
     _validate_upload(file)
     content = await _read_upload(file)
@@ -685,6 +739,45 @@ async def coaching_plan(
     """Return a personalized coaching plan based on the user's practice history."""
     plan = services.generate_coaching_plan(user_id=int(user["id"]))
     return schemas.CoachingPlanResponse(status="success", **plan)
+
+
+# ---------------------------------------------------------------------------
+# Robot Coach Lesson
+# ---------------------------------------------------------------------------
+@app.post(
+    "/api/v1/coach/robot-lesson",
+    response_model=schemas.RobotLessonResponse,
+    responses={
+        400: {"model": schemas.ErrorResponse},
+        401: {"model": schemas.ErrorResponse},
+        404: {"model": schemas.ErrorResponse},
+        500: {"model": schemas.ErrorResponse},
+    },
+)
+async def robot_lesson(
+    payload: schemas.RobotLessonRequest,
+    user: dict = Depends(get_current_user),
+) -> schemas.RobotLessonResponse:
+    """Generate a robot coach lesson from a saved session owned by the caller."""
+    try:
+        result = services.generate_robot_lesson(
+            session_id=payload.session_id,
+            user_id=int(user["id"]),
+            lesson_type=payload.lesson_type,
+            focus_area=payload.focus_area,
+        )
+        return schemas.RobotLessonResponse(**result)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        )
+    except Exception as exc:
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Robot lesson generation failed: {exc}",
+        )
 
 
 # ---------------------------------------------------------------------------

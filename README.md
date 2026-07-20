@@ -70,6 +70,7 @@ The UI uses custom CSS injected safely via Streamlit and follows modern SaaS des
 | **User Accounts & JWT Auth** | Email/password registration, bcrypt-hashed passwords, JWT-based sessions, user-scoped history/dashboard/reports (v1.2.0) |
 | **Personalized Coaching Plan** | Rule-based coaching plan derived from practice history with focus area, weekly goal, action steps, and recommended practice (v1.3.0) |
 | **Goals** | Create, track, complete, and delete personal improvement goals tied to metrics (v1.3.0) |
+| **Robot Coach Lesson** | AI-generated video-style lesson with animated avatar, TTS, subtitles, and step-by-step coaching cards based on session weaknesses (v1.4.0) |
 
 ---
 

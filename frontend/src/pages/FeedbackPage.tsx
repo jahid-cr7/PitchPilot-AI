@@ -249,6 +249,12 @@ export default function FeedbackPage() {
                 <Download className="mr-1.5 inline h-3.5 w-3.5" />
                 {exporting === "csv" ? "Exporting…" : "Export CSV"}
               </GradientButton>
+              <GradientButton
+                onClick={() => navigate("/robot-coach", { state: { sessionId } })}
+              >
+                <Sparkles className="mr-1.5 inline h-3.5 w-3.5" />
+                Robot Coach Lesson
+              </GradientButton>
             </>
           ) : saveWarning ? (
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-300">

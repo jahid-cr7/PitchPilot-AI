@@ -16,6 +16,15 @@ import type {
   ReportExportResponse,
   SessionDetail,
   SessionSummary,
+  UserAnalytics,
+  UserProfileSummary,
+  CoachingPlan,
+  GoalsListResponse,
+  GoalDetailResponse,
+  GoalDeleteResponse,
+  GoalCreateRequest,
+  GoalUpdateRequest,
+  RobotLessonResponse,
 } from "../types/pitchpilot";
 
 const DEFAULT_BASE_URL =
@@ -277,6 +286,23 @@ export const pitchpilotApi = {
     return handleResponse<DashboardStats>(res);
   },
 
+  // User analytics + account profile (protected)
+  async getUserAnalytics() {
+    const res = await fetchWithTimeout(
+      buildUrl("/api/v1/users/me/analytics"),
+      {},
+    );
+    return handleResponse<UserAnalytics>(res);
+  },
+
+  async getUserProfileSummary() {
+    const res = await fetchWithTimeout(
+      buildUrl("/api/v1/users/me/profile"),
+      {},
+    );
+    return handleResponse<UserProfileSummary>(res);
+  },
+
   // Reports (protected)
   async exportHtmlReport(sessionId: number) {
     const res = await fetchWithTimeout(
@@ -292,5 +318,72 @@ export const pitchpilotApi = {
       {},
     );
     return handleResponse<ReportExportResponse>(res);
+  },
+
+  // Coaching Plan (protected)
+  async getCoachingPlan() {
+    const res = await fetchWithTimeout(
+      buildUrl("/api/v1/users/me/coaching-plan"),
+      {},
+    );
+    return handleResponse<CoachingPlan>(res);
+  },
+
+  // Goals (protected)
+  async getGoals() {
+    const res = await fetchWithTimeout(
+      buildUrl("/api/v1/users/me/goals"),
+      {},
+    );
+    return handleResponse<GoalsListResponse>(res);
+  },
+
+  async createGoal(payload: GoalCreateRequest) {
+    const res = await fetchWithTimeout(
+      buildUrl("/api/v1/users/me/goals"),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+    );
+    return handleResponse<GoalDetailResponse>(res);
+  },
+
+  async updateGoal(goalId: number, payload: GoalUpdateRequest) {
+    const res = await fetchWithTimeout(
+      buildUrl(`/api/v1/users/me/goals/${goalId}`),
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+    );
+    return handleResponse<GoalDetailResponse>(res);
+  },
+
+  async deleteGoal(goalId: number) {
+    const res = await fetchWithTimeout(
+      buildUrl(`/api/v1/users/me/goals/${goalId}`),
+      { method: "DELETE" },
+    );
+    return handleResponse<GoalDeleteResponse>(res);
+  },
+
+  // Robot Coach Lesson (protected)
+  async generateRobotLesson(payload: {
+    session_id: number;
+    lesson_type?: string;
+    focus_area?: string;
+  }) {
+    const res = await fetchWithTimeout(
+      buildUrl("/api/v1/coach/robot-lesson"),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+    );
+    return handleResponse<RobotLessonResponse>(res);
   },
 };

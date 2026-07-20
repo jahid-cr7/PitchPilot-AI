@@ -310,3 +310,105 @@ class MeResponse(BaseModel):
 class LogoutResponse(BaseModel):
     status: str
     message: str
+
+
+# ---------------------------------------------------------------------------
+# Coaching Plan
+# ---------------------------------------------------------------------------
+class CoachingPlanStep(BaseModel):
+    step: str
+
+
+class CoachingPlanResponse(BaseModel):
+    status: str = "success"
+    focus_area: str
+    current_level: str
+    weekly_goal: str
+    recommended_practice_mode: str
+    recommended_question: str
+    action_steps: List[str]
+    metrics_to_watch: List[str]
+    next_milestone: str
+    ai_note: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# User Goals
+# ---------------------------------------------------------------------------
+class GoalCreateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    target_metric: str = Field(..., min_length=1, max_length=100)
+    target_value: float = Field(..., gt=0)
+    current_value: float = Field(default=0.0, ge=0)
+
+
+class GoalUpdateRequest(BaseModel):
+    title: Optional[str] = Field(default=None, max_length=200)
+    target_metric: Optional[str] = Field(default=None, max_length=100)
+    target_value: Optional[float] = Field(default=None, gt=0)
+    current_value: Optional[float] = Field(default=None, ge=0)
+    status: Optional[str] = Field(default=None, pattern=r"^(active|completed|abandoned)$")
+
+
+class GoalResponse(BaseModel):
+    id: int
+    user_id: int
+    title: str
+    target_metric: str
+    target_value: float
+    current_value: float
+    status: str
+    created_at: str
+    completed_at: Optional[str] = None
+
+
+class GoalsListResponse(BaseModel):
+    status: str = "success"
+    goals: List[GoalResponse]
+
+
+class GoalDetailResponse(BaseModel):
+    status: str = "success"
+    goal: GoalResponse
+
+
+class GoalDeleteResponse(BaseModel):
+    status: str = "success"
+    message: str
+
+
+# ---------------------------------------------------------------------------
+# Robot Coach Lesson
+# ---------------------------------------------------------------------------
+class RobotLessonRequest(BaseModel):
+    session_id: int = Field(..., gt=0, description="Saved session ID to base the lesson on")
+    lesson_type: str = Field(default="interview", pattern=r"^(interview|presentation)$")
+    focus_area: str = Field(
+        default="overall",
+        pattern=r"^(answer_structure|speech|body_language|confidence|overall)$",
+    )
+
+
+class SubtitleItem(BaseModel):
+    time: int
+    text: str
+
+
+class RobotLesson(BaseModel):
+    title: str
+    coach_name: str
+    lesson_type: str
+    focus_area: str
+    problem_summary: str
+    why_it_matters: str
+    correct_method: str
+    better_example: str
+    practice_steps: List[str]
+    spoken_script: str
+    subtitles: List[SubtitleItem]
+    estimated_duration_seconds: int
+
+
+class RobotLessonResponse(BaseModel):
+    status: str
+    lesson: RobotLesson

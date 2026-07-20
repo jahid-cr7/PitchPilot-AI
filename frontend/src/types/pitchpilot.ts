@@ -111,6 +111,44 @@ export interface DashboardStats {
   recent_sessions: SessionSummary[];
 }
 
+// ---------------------------------------------------------------------------
+// User Analytics & Profile (v1.3.0)
+// ---------------------------------------------------------------------------
+export interface SkillAverages {
+  video: number;
+  camera: number;
+  speech: number;
+  answer: number;
+}
+
+export interface ScoreTrendPoint {
+  date: string;
+  score: number;
+}
+
+export interface UserAnalytics {
+  status: string;
+  total_sessions: number;
+  average_score: number;
+  best_score: number;
+  latest_score: number;
+  score_trend: ScoreTrendPoint[];
+  skill_averages: SkillAverages;
+  top_strengths: string[];
+  common_weaknesses: string[];
+  recent_sessions: SessionSummary[];
+}
+
+export interface UserProfileSummary {
+  status: string;
+  id: number;
+  name: string;
+  email: string;
+  created_at?: string | null;
+  total_sessions: number;
+  latest_session_date?: string | null;
+}
+
 export interface ReportExportResponse {
   status: string;
   filename: string;
@@ -146,4 +184,90 @@ export interface AuthTokenResponse {
 
 export interface MeResponse {
   user: AuthUser;
+}
+
+// ---------------------------------------------------------------------------
+// Coaching Plan & Goals (v2.0.0)
+// ---------------------------------------------------------------------------
+export interface CoachingPlan {
+  status: string;
+  focus_area: string;
+  current_level: string;
+  weekly_goal: string;
+  recommended_practice_mode: string;
+  recommended_question: string;
+  action_steps: string[];
+  metrics_to_watch: string[];
+  next_milestone: string;
+  ai_note?: string | null;
+}
+
+export interface UserGoal {
+  id: number;
+  user_id: number;
+  title: string;
+  target_metric: string;
+  target_value: number;
+  current_value: number;
+  status: string;
+  created_at: string;
+  completed_at?: string | null;
+}
+
+export interface GoalsListResponse {
+  status: string;
+  goals: UserGoal[];
+}
+
+export interface GoalDetailResponse {
+  status: string;
+  goal: UserGoal;
+}
+
+export interface GoalDeleteResponse {
+  status: string;
+  message: string;
+}
+
+export interface GoalCreateRequest {
+  title: string;
+  target_metric: string;
+  target_value: number;
+  current_value?: number;
+}
+
+export interface GoalUpdateRequest {
+  title?: string;
+  target_metric?: string;
+  target_value?: number;
+  current_value?: number;
+  status?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Robot Coach Lesson (v1.4.0)
+// ---------------------------------------------------------------------------
+export interface SubtitleItem {
+  time: number;
+  text: string;
+}
+
+export interface RobotLesson {
+  title: string;
+  coach_name: string;
+  lesson_type: string;
+  focus_area: string;
+  problem_summary: string;
+  why_it_matters: string;
+  correct_method: string;
+  better_example: string;
+  practice_steps: string[];
+  spoken_script: string;
+  subtitles: SubtitleItem[];
+  estimated_duration_seconds: number;
+}
+
+export interface RobotLessonResponse {
+  status: string;
+  lesson: RobotLesson;
 }
