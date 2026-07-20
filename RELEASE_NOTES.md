@@ -1,3 +1,65 @@
+# Release Notes — PitchPilot AI v1.4.0
+
+**Release Date:** 2026-07-20
+**Codename:** Robot Coach Lesson Mode
+
+---
+
+## Summary
+
+PitchPilot AI v1.4.0 introduces the **Robot Coach Lesson Mode** — an instant video-style coaching experience that teaches users how to improve after every practice session. When a user's performance is weak in a specific area, Coach Nova generates a personalized lesson explaining what went wrong, why it matters, the correct method, a better example, and actionable practice steps. The feature works offline via rule-based templates and upgrades to AI-generated personalization when an API key is configured.
+
+---
+
+## What's New in v1.4.0
+
+### Backend
+- **Robot Coach Lesson endpoint** — `POST /api/v1/coach/robot-lesson` generates a structured lesson from a saved session. Protected by JWT with strict user-scoped session lookup (User A cannot access User B's sessions).
+- **AI-powered generation** — When `PITCHPILOT_AI_API_KEY` is set, the backend calls the LLM with session transcript, weaknesses, strengths, and scores to produce a fully personalized lesson.
+- **Rule-based fallback** — Five focus-area templates (`answer_structure`, `speech`, `body_language`, `confidence`, `overall`) provide instant offline lessons. The problem summary is personalized with the user's actual session weaknesses.
+- **Lesson structure** — Every lesson includes title, coach name (`Coach Nova`), problem summary, why-it-matters, correct method, better example, practice steps, spoken script, subtitles with timestamps, and estimated duration.
+- **Test coverage expanded** — 56 backend tests (up from 51) covering auth, isolation, fallback generation, response structure, and all focus-area variants.
+
+### React (frontend/)
+- **New `/robot-coach` page** — Video-style lesson screen with dark premium background, animated robot avatar with pulse/speak animation, subtitle player synced to playback, progress bar, play/pause/replay controls, and browser text-to-speech (`window.speechSynthesis`).
+- **Lesson cards** — Four informational cards (What Went Wrong, Why It Matters, Correct Method, Better Example) plus a numbered Practice Steps checklist.
+- **Feedback page integration** — "Robot Coach Lesson" button appears when a session is saved, navigating to `/robot-coach` with the session ID.
+- **Graceful TTS fallback** — If `speechSynthesis` is unavailable, subtitles still advance on a timer without crashing.
+- **No auto-play** — Audio only starts when the user clicks Play.
+
+### Mobile (mobile/)
+- **Robot Coach card on Feedback** — Glass-morphism card with Coach Nova avatar, description, and "Open Robot Coach" button as an entry point to the lesson.
+
+### Docs
+- **`docs/ROBOT_COACH_LESSON.md`** — Full feature documentation: purpose, endpoint, AI vs fallback behavior, frontend playback, limitations, and roadmap.
+- **`docs/ROBOT_COACH_QA_V1_4.md`** — Complete QA checklist covering backend endpoints, web flow, mobile card, auth isolation, browser TTS, fallback mode, and known limitations.
+
+---
+
+## Upgrade Notes
+
+1. No database migration is required for v1.4.0.
+2. Rebuild the React frontend after upgrading:
+   ```bash
+   cd frontend && npm run build
+   ```
+3. If you deploy via Docker Compose, rebuild both images:
+   ```bash
+   docker compose -f docker-compose.prod.yml up --build -d
+   ```
+
+---
+
+## Known Limitations
+
+- No real AI video generation yet — the robot coach is a text + TTS + animation UI, not a generated video file.
+- Subtitle timing is approximate (~4 seconds per sentence) rather than true word-level synchronization.
+- Single focus area per lesson — users must request a new lesson to switch focus areas.
+- Mobile UI is simplified — the full animated player is on the React web app.
+- TTS voice quality depends on the browser/OS.
+
+---
+
 # Release Notes — PitchPilot AI v1.3.0
 
 **Release Date:** 2026-07-19

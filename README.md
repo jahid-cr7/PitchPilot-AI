@@ -463,6 +463,45 @@ See [`docs/E2E_TESTING.md`](docs/E2E_TESTING.md) for full details on environment
 
 ---
 
+## AI Robot Coach Lesson Mode
+
+PitchPilot AI now includes a **Robot Coach** that generates instant video-style lessons based on your practice session results.
+
+### How it works
+
+1. **Complete a practice session** on the Practice page.
+2. Go to the **Feedback** page and click **"Robot Coach Lesson"**.
+3. **Coach Nova** appears with a personalized lesson:
+   - What you did wrong
+   - Why it matters
+   - The correct method
+   - A better example
+   - Actionable practice steps
+4. Click **Play** to hear the lesson with browser text-to-speech and animated subtitles.
+5. Click **Practice Again** to apply what you learned immediately.
+
+### Features
+
+- **Animated robot avatar** with pulse and speak animations
+- **Browser TTS** (`window.speechSynthesis`) with play/pause/replay controls
+- **Subtitles** synced to playback
+- **Offline fallback** — works without an AI API key using structured lesson templates
+- **AI personalization** — when `PITCHPILOT_AI_API_KEY` is configured, lessons are generated from your actual transcript, weaknesses, and scores
+- **User-scoped** — lessons are generated only from your own sessions
+
+### Focus areas
+
+Choose from five coaching dimensions:
+- **Answer Structure** — STAR method, clear introductions, strong closings
+- **Speech** — filler word reduction, pace control, clarity
+- **Body Language** — framing, eye contact, gesture control
+- **Confidence** — vocal presence, decisive phrasing, power posing
+- **Overall** — balanced improvement across all dimensions
+
+See [`docs/ROBOT_COACH_LESSON.md`](docs/ROBOT_COACH_LESSON.md) for the full technical specification.
+
+---
+
 ## How to Use Demo Mode
 
 Perfect for interviews, presentations, or testing without a real video:

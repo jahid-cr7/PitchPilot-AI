@@ -20,12 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Feedback page integration** — "Robot Coach Lesson" button appears on the Feedback page when a `session_id` exists, navigating to `/robot-coach` with the session ID.
 - **Mobile Robot Coach card** — Simple glass-morphism card on the mobile Feedback screen with Coach Nova avatar, description, and "Open Robot Coach" button as an entry point.
 - **Backend tests** — `tests/test_robot_coach.py` adds 5 tests covering auth requirement (401), cross-user session isolation (404), fallback generation without AI key, response structure (spoken_script, practice_steps, subtitles, duration), and all focus_area variants.
-- **Documentation** — `docs/ROBOT_COACH_LESSON.md` covers purpose, endpoint, request/response format, AI vs fallback behavior, frontend playback behavior, mobile simplification, limitations, and future roadmap.
+- **Documentation** — `docs/ROBOT_COACH_LESSON.md` covers purpose, endpoint, request/response format, AI vs fallback behavior, frontend playback behavior, mobile simplification, limitations, and future roadmap. `docs/ROBOT_COACH_QA_V1_4.md` provides the full QA checklist for backend endpoints, web flow, mobile card, auth isolation, browser TTS, and fallback mode.
+- **E2E tests** — `frontend/e2e/robot-coach.spec.ts` adds 2 lightweight Playwright tests: protected route redirect when logged out, and friendly empty state when no session context is provided.
 
 ### Changed
 - `frontend/src/pages/FeedbackPage.tsx` — adds "Robot Coach Lesson" button next to export buttons when `sessionId` is present.
 - `frontend/src/App.tsx` — adds lazy-loaded `/robot-coach` protected route.
-- `README.md` — adds Robot Coach Lesson to the Key Features table.
+- `README.md` — adds Robot Coach Lesson to the Key Features table and a dedicated "AI Robot Coach Lesson Mode" section with usage flow.
+- `RELEASE_NOTES.md` — adds v1.4.0 release notes with summary, feature breakdown, upgrade notes, and known limitations.
 
 ---
 
